@@ -1,9 +1,9 @@
 {
   "provider": "ollama",
-  "model": "deepseek-r1:14b",
+  "model": "qwen3.8-27b:latest",
   "temperature": 0.7,
   "system_prompt": "Ты полезный ассистент, который пишет качественные статьи.",
-  "num_predict": 1000,
-  "target_server_url": "",
+  "num_predict": 30000,
+  "target_server_url": "https://example.com/api/receive",
   "save_dir": "articles"
 }
