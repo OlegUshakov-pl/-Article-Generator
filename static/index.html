@@ -243,6 +243,7 @@ function inline(text) {
 
 /* --- state --- */
 let raw = '';
+let lastRendered = null;
 let generated = false;
 let lastPrompt = '';
 let streaming = false;
@@ -250,21 +251,29 @@ let saveId = null;
 
 const saveBtn = $('saveBtn');
 
+function setQuillHtml(html) {
+  try {
+    const delta = quill.clipboard.convert({ html: html || '<p></p>', text: '' });
+    quill.setContents(delta, 'silent');
+  } catch (e) {
+    quill.root.innerHTML = html || '<p><br></p>';
+  }
+}
+
 function renderResult() {
   if (!raw.trim()) {
     $('editor-empty').classList.remove('hidden');
     $('editorWrap').classList.add('hidden');
+    lastRendered = null;
     generated = false;
     saveBtn.disabled = true;
     return;
   }
   $('editor-empty').classList.add('hidden');
   $('editorWrap').classList.remove('hidden');
-  const html = mdToHtml(raw);
-  const current = quill.root.innerHTML;
-  if (current !== html) {
-    quill.root.innerHTML = html;
-  }
+  if (lastRendered === raw) return;
+  lastRendered = raw;
+  setQuillHtml(mdToHtml(raw));
   generated = true;
   saveBtn.disabled = false;
 }
@@ -283,7 +292,7 @@ $('generateBtn').addEventListener('click', async () => {
   $('generateText').textContent = 'Генерируем...';
   $('streamBadge').classList.remove('hidden');
   $('statusText').textContent = 'Стримим ответ от Ollama…';
-  quill.root.innerHTML = '';
+  quill.setContents([], 'silent');
   renderResult();
 
   try {
@@ -330,8 +339,8 @@ $('generateBtn').addEventListener('click', async () => {
 
 $('clearBtn').addEventListener('click', () => {
   if (streaming) return;
-  raw = ''; saveId = null;
-  quill.root.innerHTML = '';
+  raw = ''; saveId = null; lastPrompt = '';
+  quill.setContents([], 'silent');
   $('title').value = '';
   $('prompt').value = '';
   $('statusText').textContent = '';

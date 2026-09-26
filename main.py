@@ -1,4 +1,5 @@
 import json
+import os
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -123,11 +124,18 @@ def get_settings() -> dict:
 
 @app.post("/api/settings")
 def post_settings(body: SettingsIn) -> dict:
-    return write_settings(body.model_dump())
+    data = body.model_dump()
+    target = data.get("target_server_url")
+    if target is not None and not str(target).strip():
+        raise HTTPException(
+            status_code=400, detail="Target Server URL обязателен"
+        )
+    return write_settings(data)
 
 
 @app.get("/api/models")
 def get_models() -> dict:
+    names: list = []
     try:
         result = ollama.list()
     except Exception as exc:
@@ -135,12 +143,37 @@ def get_models() -> dict:
             status_code=503,
             detail=f"Ollama недоступна. Запустите её (ollama serve). Детали: {exc}",
         )
-    models = []
     for m in getattr(result, "models", []) or []:
         name = getattr(m, "model", None) or getattr(m, "name", None)
         if name:
-            models.append({"name": name})
-    return {"models": models}
+            names.append(name)
+
+    if not names:
+        names = _raw_model_names()
+
+    seen, unique = set(), []
+    for n in names:
+        if n not in seen:
+            seen.add(n)
+            unique.append(n)
+    return {"models": [{"name": n} for n in unique]}
+
+
+def _raw_model_names() -> list:
+    host = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip("/")
+    if not host.startswith("http"):
+        host = f"http://{host}"
+    try:
+        with httpx.Client(timeout=5.0) as client:
+            data = client.get(f"{host}/api/tags").json()
+    except Exception:
+        return []
+    names = []
+    for m in data.get("models", []) or []:
+        name = m.get("model") or m.get("name")
+        if name:
+            names.append(name)
+    return names
 
 
 # ----------------------------------------------------------------- generate
@@ -205,7 +238,10 @@ def generate(body: GenerateIn) -> StreamingResponse:
                 if content:
                     yield content
         except Exception as exc:
-            yield f"\n\n[ОШИБКА] Ошибка генерации: {exc}"
+            yield (
+                "\n\n[ОШИБКА] Не удалось получить ответ от Ollama. "
+                f"Проверьте, что она запущена (ollama serve). Детали: {exc}"
+            )
 
     return StreamingResponse(
         event_stream(),

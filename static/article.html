@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Статья · Article Generator</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+<style>
+  body { background:#f9fafb; }
+  #editor-container { min-height: 460px; background:#fff; }
+  #editor-container.ql-container.ql-snow { border:0; font-size:16px; }
+  #editor-container .ql-editor { min-height:460px; color:#374151; line-height:1.75; }
+  #editor-container .ql-editor h1 { font-size:2rem; font-weight:700; margin:.6em 0 .4em; color:#111827; }
+  #editor-container .ql-editor h2 { font-size:1.5rem; font-weight:700; margin:.6em 0 .4em; color:#111827; }
+  #editor-container .ql-editor h3 { font-size:1.25rem; font-weight:600; margin:.6em 0 .4em; color:#111827; }
+  #editor-container .ql-editor p { margin:.5em 0; }
+  #editor-container .ql-editor blockquote { border-left:4px solid #c7d2fe; background:#eef2ff; padding:.6em 1em; border-radius:.5rem; color:#4338ca; }
+  #editor-container .ql-editor ul, #editor-container .ql-editor ol { padding-left:1.5em; margin:.5em 0; }
+  #editor-container .ql-editor li { margin:.25em 0; }
+  #editor-container .ql-editor a { color:#4f46e5; text-decoration:underline; }
+  #editor-container .ql-editor pre { background:#111827; color:#e5e7eb; padding:1em; border-radius:.75rem; overflow:auto; }
+  .ql-snow.ql-toolbar { border-top-left-radius:.75rem; border-top-right-radius:.75rem; background:#f9fafb; border-color:#e5e7eb; }
+  .ql-snow .ql-stroke { stroke:#6b7280; }
+  .ql-snow .ql-fill, .ql-snow .ql-stroke.ql-fill { fill:#6b7280; }
+  .ql-snow .ql-picker { color:#6b7280; }
+  .ql-snow.ql-container { border-color:#e5e7eb; border-bottom-left-radius:.75rem; border-bottom-right-radius:.75rem; }
+  .ql-toolbar button:hover .ql-stroke, .ql-toolbar button.ql-active .ql-stroke { stroke:#4f46e5; }
+  .ql-toolbar button:hover .ql-fill, .ql-toolbar button.ql-active .ql-fill { fill:#4f46e5; }
+  .ql-toolbar button:hover, .ql-toolbar button.ql-active { color:#4f46e5; }
+  .ql-snow .ql-tooltip { box-shadow:0 4px 16px rgba(0,0,0,.1); border-radius:.5rem; border-color:#e5e7eb; }
+  .ql-snow .ql-picker-options { border-color:#e5e7eb; border-radius:.5rem; box-shadow:0 4px 16px rgba(0,0,0,.08); }
+</style>
+</head>
+<body class="min-h-screen text-gray-700 antialiased">
+
+<header class="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-gray-200">
+  <div class="max-w-5xl mx-auto px-5 h-16 flex items-center justify-between">
+    <a href="/static/index.html" class="flex items-center gap-2.5 group">
+      <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 grid place-items-center text-white text-lg shadow-sm group-hover:shadow-md transition-all">✨</span>
+      <span class="font-semibold text-gray-900 tracking-tight">Article<span class="text-indigo-600">Generator</span></span>
+    </a>
+    <nav class="flex items-center gap-1 text-sm">
+      <a href="/static/index.html" class="px-3.5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all">Создать</a>
+      <a href="/static/articles.html" class="px-3.5 py-2 rounded-lg font-medium bg-indigo-50 text-indigo-700 transition-all">Статьи</a>
+      <a href="/static/settings.html" class="px-3.5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all">Настройки</a>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-5 py-10">
+
+  <!-- Loader -->
+  <div id="loader" class="space-y-5">
+    <div class="h-10 w-2/3 rounded-xl bg-white border border-gray-200 animate-pulse"></div>
+    <div class="h-12 rounded-2xl bg-white border border-gray-200 animate-pulse"></div>
+    <div class="h-96 rounded-2xl bg-white border border-gray-200 animate-pulse"></div>
+  </div>
+
+  <!-- Error -->
+  <div id="errorBox" class="hidden">
+    <div class="bg-white rounded-2xl border border-red-200 shadow-sm px-6 py-16 text-center">
+      <div class="text-4xl mb-3">⚠️</div>
+      <h2 class="text-lg font-semibold text-gray-900">Статья не найдена</h2>
+      <p id="errorText" class="text-gray-500 mt-1 text-sm"></p>
+      <a href="/static/articles.html" class="inline-block mt-5 px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-all">К списку статей</a>
+    </div>
+  </div>
+
+  <div id="content" class="hidden">
+    <div class="flex items-center justify-between gap-4 mb-5">
+      <a href="/static/articles.html" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-indigo-600 transition-all">
+        ← Назад к статьям
+      </a>
+      <span id="meta" class="text-xs text-gray-400"></span>
+    </div>
+
+    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-5">
+      <label for="title" class="block text-sm font-semibold text-gray-900 mb-2">Заголовок</label>
+      <input id="title" type="text"
+        class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 font-medium placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+        placeholder="Заголовок статьи">
+    </section>
+
+    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-5">
+      <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+        <h2 class="font-semibold text-gray-900">Контент</h2>
+      </div>
+      <div id="toolbar">
+        <button class="ql-bold"></button>
+        <button class="ql-italic"></button>
+        <button class="ql-underline"></button>
+        <select class="ql-header">
+          <option value="1"></option>
+          <option value="2"></option>
+          <option value="3"></option>
+          <option selected></option>
+        </select>
+        <button class="ql-list" value="ordered"></button>
+        <button class="ql-list" value="bullet"></button>
+        <button class="ql-blockquote"></button>
+        <button class="ql-link"></button>
+        <button class="ql-code-block"></button>
+        <button class="ql-clean"></button>
+      </div>
+      <div id="editor-container"></div>
+    </section>
+
+    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+      <div class="flex flex-wrap items-center justify-end gap-3">
+        <a href="/static/articles.html" class="px-5 py-3 rounded-xl border border-gray-200 bg-white text-gray-600 font-medium hover:bg-gray-50 transition-all">Назад</a>
+        <button id="exportBtn"
+          class="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-gray-200 bg-white text-gray-600 font-medium hover:bg-gray-50 hover:text-gray-900 transition-all">
+          ⬇️ Экспорт JSON
+        </button>
+        <button id="sendBtn"
+          class="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 font-medium hover:bg-indigo-100 transition-all">
+          📤 Выслать на сервер
+        </button>
+        <button id="saveBtn"
+          class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold shadow-sm hover:bg-indigo-700 hover:shadow-md active:scale-[.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+          💾 Сохранить
+        </button>
+      </div>
+      <p id="dirtyHint" class="hidden text-right text-xs text-amber-600 mt-3">Есть несохранённые изменения</p>
+    </section>
+  </div>
+</main>
+
+<div id="toastRoot" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 items-end"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const id = new URLSearchParams(location.search).get('id');
+
+const quill = new Quill('#editor-container', {
+  theme: 'snow',
+  placeholder: 'Содержимое статьи...',
+  modules: { toolbar: '#toolbar' }
+});
+
+function loadIntoQuill(html) {
+  try {
+    const delta = quill.clipboard.convert({ html: html || '<p></p>', text: '' });
+    quill.setContents(delta, 'silent');
+  } catch (e) {
+    quill.root.innerHTML = html || '<p><br></p>';
+  }
+}
+
+function toast(message, type = 'success') {
+  const colors = { success:'bg-white border-emerald-200 text-emerald-700', error:'bg-white border-red-200 text-red-600', info:'bg-white border-indigo-200 text-indigo-700' };
+  const icons = { success:'✅', error:'⚠️', info:'ℹ️' };
+  const el = document.createElement('div');
+  el.className = `flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-lg text-sm font-medium ${colors[type]||colors.info} translate-x-4 opacity-0 transition-all duration-300`;
+  el.innerHTML = `<span>${icons[type]||icons.info}</span><span>${escapeHtml(message)}</span>`;
+  $('toastRoot').appendChild(el);
+  requestAnimationFrame(() => el.classList.remove('translate-x-4','opacity-0'));
+  setTimeout(() => { el.classList.add('translate-x-4','opacity-0'); setTimeout(()=>el.remove(),320); }, 4000);
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+let dirty = false;
+const saveBtn = $('saveBtn');
+
+function setDirty(v) {
+  dirty = v;
+  $('dirtyHint').classList.toggle('hidden', !v);
+}
+quill.on('text-change', () => setDirty(true));
+$('title').addEventListener('input', () => setDirty(true));
+
+function show(text) { $('errorText').textContent = text; }
+
+function fail(message) {
+  $('loader').classList.add('hidden');
+  $('content').classList.add('hidden');
+  $('errorBox').classList.remove('hidden');
+  show(message);
+}
+
+async function load() {
+  if (!id) { fail('В URL не передан параметр ?id='); return; }
+  try {
+    const res = await fetch(`/api/articles/${encodeURIComponent(id)}`);
+    if (res.status === 404) { fail('Такой статьи не существует или она была удалена.'); return; }
+    if (!res.ok) throw new Error(`Сервер ответил ${res.status}`);
+    const a = await res.json();
+
+    $('title').value = a.title || '';
+    loadIntoQuill(a.content || '');
+    const created = (a.created_at || '').replace('T', ' ').slice(0, 16);
+    const updated = (a.updated_at || '').replace('T', ' ').slice(0, 16);
+    $('meta').textContent = `Создано: ${created} · Обновлено: ${updated}`;
+
+    $('loader').classList.add('hidden');
+    $('content').classList.remove('hidden');
+    setDirty(false);
+  } catch (err) {
+    fail(err.message || 'Ошибка загрузки статьи');
+  }
+}
+
+saveBtn.addEventListener('click', async () => {
+  const title = $('title').value.trim();
+  const content = quill.root.innerHTML;
+  if (!title) { toast('Укажите заголовок', 'error'); $('title').focus(); return; }
+
+  saveBtn.disabled = true;
+  const original = saveBtn.innerHTML;
+  saveBtn.innerHTML = '⏳ Сохраняем...';
+  try {
+    const res = await fetch(`/api/articles/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, content })
+    });
+    if (!res.ok) throw new Error('Не удалось сохранить изменения');
+    await res.json();
+    setDirty(false);
+    toast('Изменения сохранены', 'success');
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = original;
+  }
+});
+
+$('exportBtn').addEventListener('click', async () => {
+  try {
+    const res = await fetch(`/api/articles/${encodeURIComponent(id)}`);
+    if (!res.ok) throw new Error('Не удалось получить статью');
+    const data = await res.json();
+    data.title = $('title').value.trim() || data.title;
+    data.content = quill.root.innerHTML;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `article_${id}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast('Файл article_' + id + '.json скачан', 'success');
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+});
+
+$('sendBtn').addEventListener('click', async () => {
+  const btn = $('sendBtn');
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Отправляем...';
+  try {
+    const res = await fetch(`/api/send/${encodeURIComponent(id)}`, { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || `Ошибка ${res.status}`);
+    toast(`Отправлено на ${data.target} (HTTP ${data.status_code})`, 'success');
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = original;
+  }
+});
+
+window.addEventListener('beforeunload', e => {
+  if (dirty) { e.preventDefault(); e.returnValue = ''; }
+});
+
+load();
+</script>
+</body>
+</html>

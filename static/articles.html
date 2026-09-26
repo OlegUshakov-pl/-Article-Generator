@@ -104,7 +104,10 @@ function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;',
 
 function stripHtml(html) {
   const d = document.createElement('div');
-  d.innerHTML = html;
+  d.innerHTML = String(html || '').replace(
+    /<(br|\/p|\/h[1-6]|\/li|\/blockquote|\/div|\/pre|\/tr|hr)[^>]*>/gi,
+    ' '
+  );
   return (d.textContent || '').replace(/\s+/g, ' ').trim();
 }
 
