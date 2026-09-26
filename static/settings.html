@@ -18,6 +18,7 @@
     box-shadow:0 2px 6px rgba(79,70,229,.4); cursor:pointer;
   }
   input[type=range]::-moz-range-track { height:6px; border-radius:999px; background:#e5e7eb; }
+  .provider-card[data-active="true"] { border-color:#6366f1; background:#eef2ff; box-shadow:0 0 0 3px rgba(99,102,241,.12); }
 </style>
 </head>
 <body class="min-h-screen text-gray-700 antialiased">
@@ -40,35 +41,70 @@
 
   <div class="text-center mb-8">
     <h1 class="text-3xl font-bold text-gray-900 tracking-tight">Настройки</h1>
-    <p class="text-gray-500 mt-2">Параметры генерации и куда высылать готовые статьи.</p>
+    <p class="text-gray-500 mt-2">Источник моделей, место хранения и параметры генерации.</p>
   </div>
 
   <!-- Loader -->
   <div id="loader" class="space-y-5">
-    <div class="h-40 rounded-2xl bg-white border border-gray-200 animate-pulse"></div>
-    <div class="h-40 rounded-2xl bg-white border border-gray-200 animate-pulse"></div>
-    <div class="h-40 rounded-2xl bg-white border border-gray-200 animate-pulse"></div>
+    <div class="h-44 rounded-2xl bg-white border border-gray-200 animate-pulse"></div>
+    <div class="h-44 rounded-2xl bg-white border border-gray-200 animate-pulse"></div>
+    <div class="h-44 rounded-2xl bg-white border border-gray-200 animate-pulse"></div>
   </div>
 
   <form id="form" class="hidden space-y-5">
 
-    <!-- Model -->
+    <!-- Providers -->
     <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-      <div class="flex items-center gap-3 mb-4">
-        <span class="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 grid place-items-center text-lg">🤖</span>
-        <div>
-          <h2 class="font-semibold text-gray-900">Модель Ollama</h2>
-          <p class="text-xs text-gray-500">Модель, которая будет писать статьи</p>
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <div class="flex items-center gap-3">
+          <span class="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 grid place-items-center text-lg">🤖</span>
+          <div>
+            <h2 class="font-semibold text-gray-900">Источник моделей</h2>
+            <p class="text-xs text-gray-500">Выберите, где запущены установленные модели</p>
+          </div>
         </div>
+        <button type="button" id="refreshBtn"
+          class="text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-all">
+          🔄 Обновить
+        </button>
       </div>
+
+      <div id="providerGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4"></div>
+
+      <label for="model" class="block text-sm font-medium text-gray-700 mb-2">Модель</label>
       <div class="relative">
         <select id="model"
-          class="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 pr-10 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
-          <option value="">Загрузка моделей…</option>
+          class="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 pr-10 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+          <option value="">—</option>
         </select>
         <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">▾</span>
       </div>
-      <p id="modelsHint" class="text-xs text-gray-400 mt-2"></p>
+      <p id="modelHint" class="text-xs text-gray-400 mt-2"></p>
+    </section>
+
+    <!-- Storage -->
+    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="w-10 h-10 rounded-xl bg-cyan-50 border border-cyan-100 grid place-items-center text-lg">💾</span>
+        <div>
+          <h2 class="font-semibold text-gray-900">Где сохранять статьи</h2>
+          <p class="text-xs text-gray-500">Папка на диске, абсолютный или относительный путь</p>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-2">
+        <input id="save_dir" type="text"
+          class="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700 font-mono text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+          placeholder="articles">
+        <button type="button" id="browseBtn"
+          class="px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-600 text-sm font-medium hover:bg-gray-50 hover:text-gray-900 transition-all">
+          📂 Обзор…
+        </button>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 mt-3">
+        <button type="button" data-quick="articles" class="quick px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-xs font-medium text-gray-600 transition-all">articles (по умолчанию)</button>
+        <span id="storageHint" class="text-xs text-gray-400"></span>
+      </div>
     </section>
 
     <!-- Generation -->
@@ -135,17 +171,47 @@
   </form>
 </main>
 
+<!-- Folder picker -->
+<div id="pickerModal" class="hidden fixed inset-0 z-50 items-center justify-center p-5">
+  <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm" onclick="closePicker()"></div>
+  <div class="relative bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-lg overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div>
+        <h3 class="font-semibold text-gray-900">Выбор папки</h3>
+        <p id="pickerPath" class="text-xs text-gray-400 font-mono mt-0.5 truncate max-w-xs"></p>
+      </div>
+      <button onclick="closePicker()" class="w-8 h-8 rounded-lg text-gray-400 hover:bg-gray-100 transition-all">✕</button>
+    </div>
+    <div id="pickerList" class="max-h-72 overflow-y-auto p-2"></div>
+    <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between gap-3 bg-gray-50/60">
+      <div class="flex items-center gap-2">
+        <button id="pickerUp" class="px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-600 text-sm font-medium hover:bg-gray-50 transition-all">↑ Вверх</button>
+        <button id="pickerRoot" class="px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-600 text-sm font-medium hover:bg-gray-50 transition-all">🏠 Проект</button>
+      </div>
+      <button id="pickerSelect" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-all">Выбрать эту папку</button>
+    </div>
+  </div>
+</div>
+
 <div id="toastRoot" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 items-end"></div>
 
 <script>
 const $ = (id) => document.getElementById(id);
+
+let providersData = [];
+let selectedProvider = 'ollama';
+let savedSettings = {};
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 
 function toast(message, type = 'success') {
   const colors = { success:'bg-white border-emerald-200 text-emerald-700', error:'bg-white border-red-200 text-red-600', info:'bg-white border-indigo-200 text-indigo-700' };
   const icons = { success:'✅', error:'⚠️', info:'ℹ️' };
   const el = document.createElement('div');
   el.className = `flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-lg text-sm font-medium ${colors[type]||colors.info} translate-x-4 opacity-0 transition-all duration-300`;
-  el.innerHTML = `<span>${icons[type]||icons.info}</span><span>${String(message).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</span>`;
+  el.innerHTML = `<span>${icons[type]||icons.info}</span><span>${escapeHtml(message)}</span>`;
   $('toastRoot').appendChild(el);
   requestAnimationFrame(() => el.classList.remove('translate-x-4','opacity-0'));
   setTimeout(() => { el.classList.add('translate-x-4','opacity-0'); setTimeout(()=>el.remove(),320); }, 4000);
@@ -153,54 +219,191 @@ function toast(message, type = 'success') {
 
 $('temperature').addEventListener('input', e => { $('tempValue').textContent = e.target.value; });
 
-async function loadModels(preferred) {
+/* ---------------- providers ---------------- */
+
+const STATUS_STYLE = {
+  ready:          { dot:'bg-emerald-500', text:'text-emerald-600',  badge:'bg-emerald-50 border-emerald-100' },
+  not_running:    { dot:'bg-amber-500',   text:'text-amber-600',    badge:'bg-amber-50 border-amber-100' },
+  not_installed:  { dot:'bg-gray-400',    text:'text-gray-500',     badge:'bg-gray-100 border-gray-200' },
+};
+
+function renderProviders() {
+  const grid = $('providerGrid');
+  grid.innerHTML = '';
+  providersData.forEach(p => {
+    const st = STATUS_STYLE[p.status] || STATUS_STYLE.not_installed;
+    const active = p.id === selectedProvider;
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'provider-card text-left rounded-xl border border-gray-200 bg-white p-4 transition-all hover:shadow-sm';
+    card.dataset.active = String(active);
+    card.dataset.provider = p.id;
+    card.innerHTML = `
+      <div class="flex items-start justify-between gap-2">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-lg grid place-items-center text-base ${active ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-500'}">${p.id === 'ollama' ? '🦙' : ' LM'}</span>
+          <span class="font-semibold text-gray-900">${escapeHtml(p.name)}</span>
+        </div>
+        <span class="w-4 h-4 mt-1 rounded-full border-2 ${active ? 'border-indigo-600 bg-indigo-600' : 'border-gray-300'} grid place-items-center">
+          ${active ? '<span class="w-1.5 h-1.5 rounded-full bg-white"></span>' : ''}
+        </span>
+      </div>
+      <div class="mt-3 flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>
+        <span class="text-xs font-medium ${st.text}">${escapeHtml(p.message)}</span>
+      </div>
+      <div class="mt-1 text-[11px] text-gray-400">${p.models.length} ${plural(p.models.length, ['модель','модели','моделей'])}</div>`;
+    card.addEventListener('click', () => selectProvider(p.id));
+    grid.appendChild(card);
+  });
+}
+
+function plural(n, forms) {
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return forms[2];
+  if (b > 1 && b < 5) return forms[1];
+  if (b === 1) return forms[0];
+  return forms[2];
+}
+
+function selectProvider(id, preferredModel) {
+  selectedProvider = id;
+  renderProviders();
+  const p = providersData.find(x => x.id === id) || { models: [], message: 'источник не найден', status: 'not_installed' };
   const select = $('model');
+  select.innerHTML = '';
+
+  if (!p.models.length) {
+    const o = document.createElement('option');
+    o.value = '';
+    o.textContent = p.status === 'not_installed'
+      ? `${p.name || id} не установлена — модели недоступны`
+      : `${p.name || id} не запущена — модели недоступны`;
+    select.appendChild(o);
+    select.disabled = true;
+  } else {
+    p.models.forEach(name => {
+      const o = document.createElement('option');
+      o.value = name;
+      o.textContent = name;
+      select.appendChild(o);
+    });
+    select.disabled = false;
+    const want = preferredModel || savedSettings.model;
+    select.value = p.models.includes(want) ? want : p.models[0];
+  }
+  $('modelHint').textContent = p.message + (p.models.length ? ` · моделей: ${p.models.length}` : '');
+}
+
+async function loadProviders(preferredModel) {
+  $('refreshBtn').disabled = true;
   try {
-    const res = await fetch('/api/models');
+    const res = await fetch('/api/providers');
+    if (!res.ok) throw new Error('Сервер не отвечает');
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Ollama недоступна');
-    const models = data.models || [];
-    if (!models.length) {
-      select.innerHTML = '<option value="">Нет моделей — выполните ollama pull</option>';
-      $('modelsHint').textContent = 'В Ollama не найдено ни одной модели.';
-      return;
-    }
-    select.innerHTML = '';
-    for (const m of models) {
-      const opt = document.createElement('option');
-      opt.value = m.name;
-      opt.textContent = m.name;
-      select.appendChild(opt);
-    }
-    if (preferred && models.some(m => m.name === preferred)) select.value = preferred;
-    $('modelsHint').textContent = `Найдено моделей: ${models.length}`;
+    providersData = data.providers || [];
+    const saved = savedSettings.provider || data.current || 'ollama';
+    selectedProvider = providersData.some(p => p.id === saved) ? saved : (providersData[0] || {}).id;
+    renderProviders();
+    selectProvider(selectedProvider, preferredModel);
+    providersData.filter(p => p.status !== 'ready').forEach(p => toast(p.message, 'info'));
   } catch (err) {
-    select.innerHTML = '<option value="">Ollama недоступна</option>';
-    $('modelsHint').textContent = err.message;
-    if (preferred) {
-      const opt = document.createElement('option');
-      opt.value = preferred;
-      opt.textContent = preferred + ' (сохранённая)';
-      select.appendChild(opt);
-      select.value = preferred;
-    }
-    toast('Не удалось получить список моделей: ' + err.message, 'error');
+    toast('Не удалось определить источники моделей: ' + err.message, 'error');
+  } finally {
+    $('refreshBtn').disabled = false;
   }
 }
+
+$('refreshBtn').addEventListener('click', () => loadProviders());
+
+/* ---------------- folder picker ---------------- */
+
+let pickerPath = '';
+
+async function openPicker() {
+  $('pickerModal').classList.remove('hidden');
+  $('pickerModal').classList.add('flex');
+  await navigatePicker($('save_dir').value.trim() || '');
+}
+
+async function closePicker() {
+  $('pickerModal').classList.add('hidden');
+  $('pickerModal').classList.remove('flex');
+}
+
+async function navigatePicker(path) {
+  const list = $('pickerList');
+  list.innerHTML = '<div class="px-3 py-6 text-center text-sm text-gray-400">Загрузка…</div>';
+  try {
+    const res = await fetch('/api/fs/list?path=' + encodeURIComponent(path));
+    if (!res.ok) throw new Error((await res.json()).detail || 'Ошибка');
+    const data = await res.json();
+    pickerPath = data.path;
+    $('pickerPath').textContent = pickerPath;
+    $('pickerUp').disabled = !data.parent;
+    $('pickerUp').classList.toggle('opacity-40', !data.parent);
+    list.innerHTML = '';
+
+    if (!data.dirs.length) {
+      list.innerHTML = '<div class="px-3 py-6 text-center text-sm text-gray-400">В этой папке нет подпапок</div>';
+    }
+    data.dirs.forEach(d => {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-sm text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 transition-all';
+      row.innerHTML = `<span>📁</span><span class="truncate">${escapeHtml(d.name)}</span>`;
+      row.addEventListener('click', () => navigatePicker(d.path));
+      list.appendChild(row);
+    });
+    $('pickerUp').onclick = () => data.parent && navigatePicker(data.parent);
+    $('pickerRoot').onclick = () => data.root && navigatePicker(data.root);
+    $('pickerRoot').disabled = pickerPath === data.root;
+    $('pickerRoot').classList.toggle('opacity-40', pickerPath === data.root);
+    $('pickerSelect').onclick = () => {
+      $('save_dir').value = pickerPath;
+      updateStorageHint();
+      closePicker();
+      toast('Папка выбрана', 'info');
+    };
+  } catch (err) {
+    list.innerHTML = `<div class="px-3 py-6 text-center text-sm text-red-500">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function updateStorageHint() {
+  const v = $('save_dir').value.trim();
+  $('storageHint').textContent = v ? `текущее значение: ${v}` : '';
+}
+
+$('browseBtn').addEventListener('click', openPicker);
+$('save_dir').addEventListener('input', updateStorageHint);
+document.querySelectorAll('[data-quick]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    $('save_dir').value = btn.dataset.quick;
+    updateStorageHint();
+  });
+});
+
+/* ---------------- load / save ---------------- */
 
 async function load() {
   try {
     const res = await fetch('/api/settings');
-    const s = await res.json();
-    $('temperature').value = s.temperature;
-    $('tempValue').textContent = s.temperature;
-    $('system_prompt').value = s.system_prompt || '';
-    $('num_predict').value = s.num_predict;
-    $('target_server_url').value = s.target_server_url || '';
-    await loadModels(s.model);
+    if (!res.ok) throw new Error('Не удалось получить настройки');
+    savedSettings = await res.json();
+
+    $('temperature').value = savedSettings.temperature;
+    $('tempValue').textContent = savedSettings.temperature;
+    $('system_prompt').value = savedSettings.system_prompt || '';
+    $('num_predict').value = savedSettings.num_predict;
+    $('target_server_url').value = savedSettings.target_server_url || '';
+    $('save_dir').value = savedSettings.save_dir || 'articles';
+    updateStorageHint();
+
+    await loadProviders(savedSettings.model);
   } catch (err) {
-    toast('Не удалось загрузить настройки', 'error');
-    await loadModels(null);
+    toast(err.message, 'error');
+    await loadProviders();
   } finally {
     $('loader').classList.add('hidden');
     $('form').classList.remove('hidden');
@@ -211,11 +414,13 @@ $('form').addEventListener('submit', async e => {
   e.preventDefault();
   const btn = $('saveBtn');
   const body = {
+    provider: selectedProvider,
     model: $('model').value,
     temperature: parseFloat($('temperature').value),
     system_prompt: $('system_prompt').value,
     num_predict: parseInt($('num_predict').value, 10) || 1000,
-    target_server_url: $('target_server_url').value.trim()
+    target_server_url: $('target_server_url').value.trim(),
+    save_dir: $('save_dir').value.trim() || 'articles'
   };
   if (!body.target_server_url) {
     toast('Target Server URL обязателен', 'error');
@@ -223,21 +428,28 @@ $('form').addEventListener('submit', async e => {
     return;
   }
   btn.disabled = true;
+  const original = btn.innerHTML;
+  btn.innerHTML = '⏳ Сохраняем...';
   try {
     const res = await fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
-    if (!res.ok) throw new Error('Не удалось сохранить настройки');
-    await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || 'Не удалось сохранить настройки');
+    savedSettings = data;
+    updateStorageHint();
     toast('Настройки сохранены', 'success');
   } catch (err) {
     toast(err.message, 'error');
   } finally {
     btn.disabled = false;
+    btn.innerHTML = original;
   }
 });
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePicker(); });
 
 load();
 </script>

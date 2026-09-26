@@ -1,30 +1,39 @@
 import json
 import os
+import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Iterator, Optional
 
 import httpx
 import ollama
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 BASE_DIR = Path(__file__).resolve().parent
-ARTICLES_DIR = BASE_DIR / "articles"
 STATIC_DIR = BASE_DIR / "static"
 SETTINGS_FILE = BASE_DIR / "settings.json"
 
+DEFAULT_SAVE_DIR = "articles"
+
 DEFAULT_SETTINGS = {
+    "provider": "ollama",
     "model": "qwen2.5:7b",
     "temperature": 0.7,
     "system_prompt": "Ты полезный ассистент, который пишет качественные статьи.",
     "num_predict": 1000,
     "target_server_url": "",
+    "save_dir": DEFAULT_SAVE_DIR,
 }
+
+PROVIDERS = (
+    {"id": "ollama", "name": "Ollama"},
+    {"id": "lmstudio", "name": "LM Studio"},
+)
 
 app = FastAPI(title="Article Generator")
 
@@ -39,8 +48,8 @@ app.add_middleware(
 
 @app.on_event("startup")
 def startup() -> None:
-    ARTICLES_DIR.mkdir(parents=True, exist_ok=True)
     STATIC_DIR.mkdir(parents=True, exist_ok=True)
+    articles_dir()
 
 
 # ----------------------------------------------------------------- settings
@@ -59,7 +68,7 @@ def read_settings() -> dict:
 
 
 def write_settings(data: dict) -> dict:
-    merged = dict(DEFAULT_SETTINGS)
+    merged = read_settings()
     merged.update({k: v for k, v in data.items() if v is not None})
     SETTINGS_FILE.write_text(
         json.dumps(merged, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -67,10 +76,25 @@ def write_settings(data: dict) -> dict:
     return merged
 
 
-def article_path(article_id: str) -> Path:
+def resolve_dir(raw: str) -> Path:
+    expanded = os.path.expandvars(os.path.expanduser(str(raw or "").strip()))
+    path = Path(expanded or DEFAULT_SAVE_DIR)
+    if not path.is_absolute():
+        path = BASE_DIR / path
+    return path
+
+
+def articles_dir() -> Path:
+    raw = str(read_settings().get("save_dir") or DEFAULT_SAVE_DIR).strip()
+    path = resolve_dir(raw or DEFAULT_SAVE_DIR)
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def article_path(article_id: str, folder: Optional[Path] = None) -> Path:
     if not article_id or ".." in article_id or "/" in article_id or "\\" in article_id:
         raise HTTPException(status_code=400, detail="Некорректный id статьи")
-    path = ARTICLES_DIR / f"{article_id}.json"
+    path = (folder or articles_dir()) / f"{article_id}.json"
     if not path.exists():
         raise HTTPException(status_code=404, detail="Статья не найдена")
     return path
@@ -84,19 +108,161 @@ def load_article(article_id: str) -> dict:
 
 
 def save_article(data: dict) -> None:
-    path = ARTICLES_DIR / f"{data['id']}.json"
+    path = articles_dir() / f"{data['id']}.json"
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+# ---------------------------------------------------------------- providers
+
+
+def _ollama_host() -> str:
+    host = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434").strip()
+    if host and not host.startswith(("http://", "https://")):
+        host = "http://" + host
+    return host.rstrip("/")
+
+
+def _lmstudio_host() -> str:
+    host = os.environ.get("LMSTUDIO_BASE_URL", "http://127.0.0.1:1234").strip()
+    if host and not host.startswith(("http://", "https://")):
+        host = "http://" + host
+    return host.rstrip("/")
+
+
+def _running(url: str) -> bool:
+    try:
+        with httpx.Client(timeout=2.0) as client:
+            return client.get(url).status_code == 200
+    except httpx.HTTPError:
+        return False
+
+
+def _existing(paths) -> bool:
+    return any(p and Path(p).exists() for p in paths)
+
+
+def ollama_installed() -> bool:
+    if shutil.which("ollama"):
+        return True
+    local = os.environ.get("LOCALAPPDATA") or ""
+    home = Path.home()
+    return _existing(
+        [
+            (Path(local) / "Programs" / "Ollama" / "ollama.exe") if local else None,
+            (Path(local) / "Ollama" / "ollama.exe") if local else None,
+            "/usr/local/bin/ollama",
+            "/usr/bin/ollama",
+            "/opt/homebrew/bin/ollama",
+            home / ".local" / "bin" / "ollama",
+            "/Applications/Ollama.app/Contents/MacOS/Ollama",
+        ]
+    )
+
+
+def lmstudio_installed() -> bool:
+    if shutil.which("lms") or shutil.which("lmstudio"):
+        return True
+    local = os.environ.get("LOCALAPPDATA") or ""
+    home = Path.home()
+    return _existing(
+        [
+            (Path(local) / "Programs" / "LM Studio" / "LM Studio.exe") if local else None,
+            (Path(local) / "Programs" / "lm-studio" / "LM Studio.exe") if local else None,
+            home / "Applications" / "LM Studio.app",
+            "/Applications/LM Studio.app",
+        ]
+    )
+
+
+def ollama_models() -> list:
+    host = _ollama_host()
+    try:
+        with httpx.Client(timeout=5.0) as client:
+            data = client.get(f"{host}/api/tags").json()
+        names = [m.get("model") or m.get("name") for m in data.get("models", []) or []]
+        if any(names):
+            return [n for n in names if n]
+    except (httpx.HTTPError, ValueError):
+        pass
+    try:
+        result = ollama.list()
+    except Exception:
+        return []
+    names = []
+    for m in getattr(result, "models", []) or []:
+        name = getattr(m, "model", None) or getattr(m, "name", None)
+        if name:
+            names.append(name)
+    return names
+
+
+def lmstudio_models() -> list:
+    try:
+        with httpx.Client(timeout=5.0) as client:
+            data = client.get(f"{_lmstudio_host()}/v1/models").json()
+    except (httpx.HTTPError, ValueError):
+        return []
+    names = []
+    for m in data.get("data", []) or []:
+        name = m.get("id") or m.get("name")
+        if name:
+            names.append(name)
+    return names
+
+
+def provider_state(provider_id: str) -> dict:
+    meta = next((p for p in PROVIDERS if p["id"] == provider_id), PROVIDERS[0])
+    if provider_id == "lmstudio":
+        installed, running = lmstudio_installed(), _running(f"{_lmstudio_host()}/v1/models")
+        models = lmstudio_models() if running else []
+    else:
+        installed, running = ollama_installed(), _running(f"{_ollama_host()}/api/tags")
+        models = ollama_models() if running else []
+
+    if running:
+        status, message = "ready", f"{meta['name']} подключена"
+    elif installed:
+        status, message = "not_running", f"{meta['name']} не запущена"
+    else:
+        status, message = "not_installed", f"{meta['name']} не установлена"
+
+    return {
+        "id": meta["id"],
+        "name": meta["name"],
+        "installed": installed,
+        "running": running,
+        "status": status,
+        "message": message,
+        "models": models,
+    }
+
+
+def require_provider(provider_id: str) -> dict:
+    state = provider_state(provider_id)
+    if state["status"] == "not_installed":
+        raise HTTPException(
+            status_code=503,
+            detail=f"{state['name']} не установлена. Установите её или выберите другой источник.",
+        )
+    if state["status"] == "not_running":
+        raise HTTPException(
+            status_code=503,
+            detail=f"{state['name']} не запущена. Откройте приложение и дождитесь загрузки модели.",
+        )
+    return state
 
 
 # -------------------------------------------------------------------- models
 
 
 class SettingsIn(BaseModel):
+    provider: Optional[str] = None
     model: Optional[str] = None
     temperature: Optional[float] = None
     system_prompt: Optional[str] = None
     num_predict: Optional[int] = None
     target_server_url: Optional[str] = None
+    save_dir: Optional[str] = None
 
 
 class GenerateIn(BaseModel):
@@ -124,66 +290,93 @@ def get_settings() -> dict:
 
 @app.post("/api/settings")
 def post_settings(body: SettingsIn) -> dict:
-    data = body.model_dump()
+    data = body.model_dump(exclude_unset=True)
+
     target = data.get("target_server_url")
     if target is not None and not str(target).strip():
-        raise HTTPException(
-            status_code=400, detail="Target Server URL обязателен"
-        )
+        raise HTTPException(status_code=400, detail="Target Server URL обязателен")
+
+    if data.get("provider") is not None:
+        if data["provider"] not in {p["id"] for p in PROVIDERS}:
+            raise HTTPException(status_code=400, detail="Неизвестный источник моделей")
+
+    raw_dir = data.get("save_dir")
+    if raw_dir is not None:
+        raw_dir = str(raw_dir).strip() or DEFAULT_SAVE_DIR
+        data["save_dir"] = raw_dir
+        new_dir = resolve_dir(raw_dir)
+        try:
+            new_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise HTTPException(
+                status_code=400, detail=f"Невозможно создать папку: {exc}"
+            )
+        old_raw = str(read_settings().get("save_dir") or DEFAULT_SAVE_DIR).strip()
+        old_dir = resolve_dir(old_raw or DEFAULT_SAVE_DIR)
+        if old_dir.resolve() != new_dir.resolve() and old_dir.exists():
+            for file in old_dir.glob("*.json"):
+                if not (new_dir / file.name).exists():
+                    shutil.move(str(file), str(new_dir / file.name))
+
     return write_settings(data)
 
 
+@app.get("/api/providers")
+def get_providers() -> dict:
+    return {
+        "providers": [provider_state(p["id"]) for p in PROVIDERS],
+        "current": read_settings().get("provider") or "ollama",
+    }
+
+
 @app.get("/api/models")
-def get_models() -> dict:
-    names: list = []
+def get_models(provider: Optional[str] = Query(default=None)) -> dict:
+    current = provider or read_settings().get("provider") or "ollama"
+    state = provider_state(current)
+    return {
+        "provider": state["id"],
+        "status": state["status"],
+        "message": state["message"],
+        "models": [{"name": n} for n in state["models"]],
+    }
+
+
+# ----------------------------------------------------------------- fs browse
+
+
+@app.get("/api/fs/list")
+def fs_list(path: str = Query(default="")) -> dict:
+    raw = (path or "").strip()
+    target = Path(os.path.expandvars(os.path.expanduser(raw))) if raw else BASE_DIR
+    if not target.is_absolute():
+        target = BASE_DIR / target
+    if not target.is_dir():
+        target = BASE_DIR
     try:
-        result = ollama.list()
-    except Exception as exc:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Ollama недоступна. Запустите её (ollama serve). Детали: {exc}",
+        children = sorted(
+            (
+                c
+                for c in target.iterdir()
+                if c.is_dir() and not c.name.startswith(".") and c.name != "__pycache__"
+            ),
+            key=lambda c: c.name.lower(),
         )
-    for m in getattr(result, "models", []) or []:
-        name = getattr(m, "model", None) or getattr(m, "name", None)
-        if name:
-            names.append(name)
+        dirs = [{"name": c.name, "path": str(c)} for c in children]
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Нет доступа к этой папке")
+    except OSError as exc:
+        raise HTTPException(status_code=400, detail=f"Не удалось открыть папку: {exc}")
 
-    if not names:
-        names = _raw_model_names()
-
-    seen, unique = set(), []
-    for n in names:
-        if n not in seen:
-            seen.add(n)
-            unique.append(n)
-    return {"models": [{"name": n} for n in unique]}
-
-
-def _raw_model_names() -> list:
-    host = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip("/")
-    if not host.startswith("http"):
-        host = f"http://{host}"
-    try:
-        with httpx.Client(timeout=5.0) as client:
-            data = client.get(f"{host}/api/tags").json()
-    except Exception:
-        return []
-    names = []
-    for m in data.get("models", []) or []:
-        name = m.get("model") or m.get("name")
-        if name:
-            names.append(name)
-    return names
+    parent = target.parent
+    return {
+        "path": str(target),
+        "parent": str(parent) if parent != target else None,
+        "root": str(BASE_DIR),
+        "dirs": dirs,
+    }
 
 
 # ----------------------------------------------------------------- generate
-
-
-def _error_stream(message: str):
-    def gen():
-        yield f"\n\n[ОШИБКА] {message}"
-
-    return gen()
 
 
 def _chunk_content(chunk) -> str:
@@ -194,14 +387,75 @@ def _chunk_content(chunk) -> str:
     return getattr(message, "content", "") or ""
 
 
+def stream_ollama(settings: dict, messages: list) -> Iterator[str]:
+    stream = ollama.chat(
+        model=settings.get("model") or DEFAULT_SETTINGS["model"],
+        messages=messages,
+        stream=True,
+        options={
+            "temperature": float(settings.get("temperature", 0.7)),
+            "num_predict": int(settings.get("num_predict", 1000)),
+        },
+    )
+    for chunk in stream:
+        content = _chunk_content(chunk)
+        if content:
+            yield content
+
+
+def stream_lmstudio(settings: dict, messages: list) -> Iterator[str]:
+    payload = {
+        "model": settings.get("model"),
+        "messages": messages,
+        "temperature": float(settings.get("temperature", 0.7)),
+        "max_tokens": int(settings.get("num_predict", 1000)),
+        "stream": True,
+    }
+    with httpx.Client(timeout=None) as client:
+        with client.stream(
+            "POST", f"{_lmstudio_host()}/v1/chat/completions", json=payload
+        ) as response:
+            if response.status_code >= 400:
+                body = response.read().decode(errors="replace")[:400]
+                raise RuntimeError(
+                    f"LM Studio ответила ошибкой {response.status_code}: {body}"
+                )
+            for line in response.iter_lines():
+                line = line.strip()
+                if not line.startswith("data:"):
+                    continue
+                data = line[5:].strip()
+                if data == "[DONE]":
+                    break
+                try:
+                    obj = json.loads(data)
+                except json.JSONDecodeError:
+                    continue
+                choices = obj.get("choices") or [{}]
+                delta = choices[0].get("delta") or {}
+                content = delta.get("content")
+                if content:
+                    yield content
+
+
 @app.post("/api/generate")
 def generate(body: GenerateIn) -> StreamingResponse:
-    settings = read_settings()
     prompt = (body.prompt or "").strip()
     if not prompt:
         raise HTTPException(
             status_code=400, detail="Описание статьи не может быть пустым"
         )
+
+    settings = read_settings()
+    provider = settings.get("provider") or "ollama"
+    state = require_provider(provider)
+    if not state["models"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{state['name']} запущена, но модели не найдены. Загрузите модель.",
+        )
+    if settings.get("model") not in state["models"]:
+        settings["model"] = state["models"][0]
 
     messages = []
     system_prompt = (settings.get("system_prompt") or "").strip()
@@ -209,39 +463,16 @@ def generate(body: GenerateIn) -> StreamingResponse:
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": prompt})
 
-    options = {
-        "temperature": float(settings.get("temperature", 0.7)),
-        "num_predict": int(settings.get("num_predict", 1000)),
-    }
-
-    try:
-        stream = ollama.chat(
-            model=settings.get("model") or DEFAULT_SETTINGS["model"],
-            messages=messages,
-            stream=True,
-            options=options,
-        )
-    except Exception as exc:
-        return StreamingResponse(
-            _error_stream(
-                "Не удалось подключиться к Ollama. Убедитесь, что она запущена "
-                f"(ollama serve). Детали: {exc}"
-            ),
-            media_type="text/plain; charset=utf-8",
-            headers={"X-Stream-Error": "1"},
-        )
+    if provider == "lmstudio":
+        stream = stream_lmstudio(settings, messages)
+    else:
+        stream = stream_ollama(settings, messages)
 
     def event_stream():
         try:
-            for chunk in stream:
-                content = _chunk_content(chunk)
-                if content:
-                    yield content
+            yield from stream
         except Exception as exc:
-            yield (
-                "\n\n[ОШИБКА] Не удалось получить ответ от Ollama. "
-                f"Проверьте, что она запущена (ollama serve). Детали: {exc}"
-            )
+            yield f"\n\n[ОШИБКА] {exc}"
 
     return StreamingResponse(
         event_stream(),
@@ -255,13 +486,13 @@ def generate(body: GenerateIn) -> StreamingResponse:
 
 @app.get("/api/articles")
 def list_articles() -> list:
+    folder = articles_dir()
     items = []
-    if ARTICLES_DIR.exists():
-        for path in ARTICLES_DIR.glob("*.json"):
-            try:
-                items.append(json.loads(path.read_text(encoding="utf-8")))
-            except (json.JSONDecodeError, OSError):
-                continue
+    for path in folder.glob("*.json"):
+        try:
+            items.append(json.loads(path.read_text(encoding="utf-8")))
+        except (json.JSONDecodeError, OSError):
+            continue
     items.sort(key=lambda a: a.get("created_at", ""), reverse=True)
     return items
 

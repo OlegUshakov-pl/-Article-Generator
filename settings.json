@@ -1,7 +1,9 @@
 {
+  "provider": "ollama",
   "model": "qwen2.5:7b",
   "temperature": 0.7,
   "system_prompt": "Ты полезный ассистент, который пишет качественные статьи.",
   "num_predict": 1000,
-  "target_server_url": ""
+  "target_server_url": "",
+  "save_dir": "articles"
 }

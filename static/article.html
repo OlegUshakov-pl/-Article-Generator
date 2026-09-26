@@ -111,10 +111,19 @@
     <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
       <div class="flex flex-wrap items-center justify-end gap-3">
         <a href="/static/articles.html" class="px-5 py-3 rounded-xl border border-gray-200 bg-white text-gray-600 font-medium hover:bg-gray-50 transition-all">Назад</a>
-        <button id="exportBtn"
-          class="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-gray-200 bg-white text-gray-600 font-medium hover:bg-gray-50 hover:text-gray-900 transition-all">
-          ⬇️ Экспорт JSON
-        </button>
+        <div class="flex items-stretch">
+          <label for="exportFormat" class="sr-only">Формат экспорта</label>
+          <select id="exportFormat"
+            class="appearance-none rounded-l-xl border border-r-0 border-gray-200 bg-gray-50 px-3.5 py-3 pr-8 text-sm text-gray-600 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
+            <option value="json">.json</option>
+            <option value="md">.md</option>
+            <option value="txt">.txt</option>
+          </select>
+          <button id="exportBtn"
+            class="inline-flex items-center gap-2 -ml-px px-4 py-3 rounded-r-xl border border-gray-200 bg-white text-gray-600 text-sm font-medium hover:bg-gray-50 hover:text-gray-900 transition-all">
+            ⬇️ Экспорт
+          </button>
+        </div>
         <button id="sendBtn"
           class="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 font-medium hover:bg-indigo-100 transition-all">
           📤 Выслать на сервер
@@ -230,23 +239,124 @@ saveBtn.addEventListener('click', async () => {
   }
 });
 
+function htmlToMarkdown(html) {
+  const box = document.createElement('div');
+  box.innerHTML = html || '';
+
+  const inline = n => {
+    if (n.nodeType === 3) return n.nodeValue.replace(/\s+/g, ' ');
+    if (n.nodeType !== 1) return '';
+    const t = n.tagName;
+    const inner = () => Array.from(n.childNodes).map(inline).join('');
+    if (t === 'STRONG' || t === 'B') { const s = inner(); return s.trim() ? `**${s}**` : ''; }
+    if (t === 'EM' || t === 'I') { const s = inner(); return s.trim() ? `*${s}*` : ''; }
+    if (t === 'U') return `<u>${inner()}</u>`;
+    if (t === 'CODE') return '`' + inner() + '`';
+    if (t === 'A') return `[${inner()}](${n.getAttribute('href') || ''})`;
+    if (t === 'BR') return '\n';
+    return inner();
+  };
+
+  const blocks = (el, prefix = '') => {
+    let out = '';
+    let lastListType = '';
+    Array.from(el.childNodes).forEach(n => {
+      if (n.nodeType === 3) {
+        const t = n.nodeValue.replace(/\s+/g, ' ').trim();
+        if (t) out += t + '\n\n';
+        return;
+      }
+      if (n.nodeType !== 1) return;
+      const t = n.tagName;
+      if (/^H[1-6]$/.test(t)) {
+        out += '#'.repeat(Number(t[1])) + ' ' + inline(n).trim() + '\n\n';
+      } else if (t === 'PRE' || (t === 'DIV' && (n.classList.contains('ql-code-block-container') || n.classList.contains('ql-code-block')))) {
+        const code = (n.textContent || '').replace(/\s+$/, '');
+        out += '```\n' + code + '\n```\n\n';
+      } else if (t === 'P') {
+        const s = inline(n).trim();
+        if (s) out += s + '\n\n';
+      } else if (t === 'BLOCKQUOTE') {
+        const s = inline(n).trim().split('\n').map(l => '> ' + l.trim()).join('\n');
+        if (s) out += s + '\n\n';
+      } else if (t === 'UL' || t === 'OL') {
+        let ordered = 0;
+        Array.from(n.children).forEach(li => {
+          const isBullet = t === 'UL' || li.dataset.list === 'bullet';
+          if (!isBullet) ordered += 1;
+          const listType = isBullet ? 'bullet' : 'ordered';
+          if (listType !== lastListType) { if (lastListType) out += '\n'; lastListType = listType; }
+          const marker = isBullet ? '- ' : `${ordered}. `;
+          const clone = li.cloneNode(true);
+          Array.from(clone.querySelectorAll('ul,ol')).forEach(x => x.remove());
+          Array.from(clone.querySelectorAll('.ql-ui')).forEach(x => x.remove());
+          out += prefix + marker + inline(clone).trim() + '\n';
+          Array.from(li.children)
+            .filter(c => c.tagName === 'UL' || c.tagName === 'OL')
+            .forEach(c => { out += blocks(c, prefix + '  '); });
+        });
+        out += '\n';
+      } else if (t === 'HR') {
+        out += '---\n\n';
+      } else {
+        const s = inline(n).trim();
+        if (s) out += s + '\n\n';
+      }
+    });
+    return out;
+  };
+
+  return blocks(box).replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function htmlToText(html) {
+  return htmlToMarkdown(html)
+    .replace(/^```$/gm, '')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1$2')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/^>\s?/gm, '')
+    .replace(/^\s*[-*]\s+/gm, '')
+    .replace(/^\s*\d+\.\s+/gm, '')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)')
+    .replace(/<u>|<\/u>/g, '')
+    .replace(/^---$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function download(filename, content, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 $('exportBtn').addEventListener('click', async () => {
+  const format = $('exportFormat').value;
   try {
     const res = await fetch(`/api/articles/${encodeURIComponent(id)}`);
     if (!res.ok) throw new Error('Не удалось получить статью');
     const data = await res.json();
     data.title = $('title').value.trim() || data.title;
     data.content = quill.root.innerHTML;
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `article_${id}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    toast('Файл article_' + id + '.json скачан', 'success');
+
+    if (format === 'json') {
+      download(`article_${id}.json`, JSON.stringify(data, null, 2), 'application/json');
+    } else if (format === 'md') {
+      const md = `# ${data.title}\n\n${htmlToMarkdown(data.content)}\n`;
+      download(`article_${id}.md`, md, 'text/markdown;charset=utf-8');
+    } else {
+      const txt = `${data.title}\n\n${htmlToText(data.content)}\n`;
+      download(`article_${id}.txt`, txt, 'text/plain;charset=utf-8');
+    }
+    toast(`Файл article_${id}.${format} скачан`, 'success');
   } catch (err) {
     toast(err.message, 'error');
   }
