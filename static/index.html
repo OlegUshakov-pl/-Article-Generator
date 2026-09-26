@@ -291,7 +291,17 @@ $('generateBtn').addEventListener('click', async () => {
   $('generateIcon').textContent = '⏳';
   $('generateText').textContent = 'Генерируем...';
   $('streamBadge').classList.remove('hidden');
-  $('statusText').textContent = 'Стримим ответ от Ollama…';
+  $('statusText').textContent = 'Стримим ответ модели…';
+
+  const startedAt = Date.now();
+  const thinkTimer = setInterval(() => {
+    const sec = Math.round((Date.now() - startedAt) / 1000);
+    if (streaming && !raw.trim()) {
+      $('statusText').textContent = sec < 3
+        ? `Стримим ответ модели… ${sec} c`
+        : `Модель думает… ${sec} c`;
+    }
+  }, 1000);
   quill.setContents([], 'silent');
   renderResult();
 
@@ -328,6 +338,7 @@ $('generateBtn').addEventListener('click', async () => {
   } catch (err) {
     toast(err.message || 'Не удалось выполнить запрос', 'error');
   } finally {
+    clearInterval(thinkTimer);
     streaming = false;
     $('generateBtn').disabled = false;
     $('generateIcon').textContent = '✨';

@@ -300,6 +300,9 @@ def post_settings(body: SettingsIn) -> dict:
         if data["provider"] not in {p["id"] for p in PROVIDERS}:
             raise HTTPException(status_code=400, detail="Неизвестный источник моделей")
 
+    if data.get("model") is not None and not str(data["model"]).strip():
+        data.pop("model")
+
     raw_dir = data.get("save_dir")
     if raw_dir is not None:
         raw_dir = str(raw_dir).strip() or DEFAULT_SAVE_DIR
@@ -379,12 +382,28 @@ def fs_list(path: str = Query(default="")) -> dict:
 # ----------------------------------------------------------------- generate
 
 
-def _chunk_content(chunk) -> str:
+NO_CONTENT_HINT = (
+    "\n\n[ОШИБКА] Модель потратила весь лимит токенов на внутренние рассуждения "
+    "(thinking) и не вернула текст. Увеличьте Num Predict в настройках "
+    "(например 2000–4000) или выберите модель без режима reasoning."
+)
+
+
+def _chunk_parts(chunk) -> tuple:
     if isinstance(chunk, dict):
         message = chunk.get("message")
-        return message.get("content", "") if isinstance(message, dict) else ""
+        if not isinstance(message, dict):
+            return "", ""
+        return message.get("content", "") or "", message.get("thinking", "") or ""
     message = getattr(chunk, "message", None)
-    return getattr(message, "content", "") or ""
+    if message is None:
+        return "", ""
+    if isinstance(message, dict):
+        return message.get("content", "") or "", message.get("thinking", "") or ""
+    return (
+        getattr(message, "content", "") or "",
+        getattr(message, "thinking", "") or "",
+    )
 
 
 def stream_ollama(settings: dict, messages: list) -> Iterator[str]:
@@ -397,10 +416,17 @@ def stream_ollama(settings: dict, messages: list) -> Iterator[str]:
             "num_predict": int(settings.get("num_predict", 1000)),
         },
     )
+    got_content = False
+    got_thinking = False
     for chunk in stream:
-        content = _chunk_content(chunk)
+        content, thinking = _chunk_parts(chunk)
+        if thinking:
+            got_thinking = True
         if content:
+            got_content = True
             yield content
+    if not got_content and got_thinking:
+        yield NO_CONTENT_HINT
 
 
 def stream_lmstudio(settings: dict, messages: list) -> Iterator[str]:
@@ -411,6 +437,8 @@ def stream_lmstudio(settings: dict, messages: list) -> Iterator[str]:
         "max_tokens": int(settings.get("num_predict", 1000)),
         "stream": True,
     }
+    got_content = False
+    got_thinking = False
     with httpx.Client(timeout=None) as client:
         with client.stream(
             "POST", f"{_lmstudio_host()}/v1/chat/completions", json=payload
@@ -433,9 +461,14 @@ def stream_lmstudio(settings: dict, messages: list) -> Iterator[str]:
                     continue
                 choices = obj.get("choices") or [{}]
                 delta = choices[0].get("delta") or {}
+                if delta.get("reasoning_content") or delta.get("reasoning"):
+                    got_thinking = True
                 content = delta.get("content")
                 if content:
+                    got_content = True
                     yield content
+    if not got_content and got_thinking:
+        yield NO_CONTENT_HINT
 
 
 @app.post("/api/generate")
