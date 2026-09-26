@@ -128,10 +128,11 @@
 
       <label for="num_predict" class="flex items-center justify-between mb-2">
         <span class="text-sm font-medium text-gray-700">Num Predict (макс. токенов)</span>
-        <span class="text-[11px] text-gray-400">от 64 до 32768</span>
+        <span class="text-[11px] text-gray-400">от 64 до 200000 · 0 = без лимита</span>
       </label>
-      <input id="num_predict" type="number" min="64" max="32768" step="1" value="1000" inputmode="numeric"
+      <input id="num_predict" type="number" min="0" max="200000" step="1" value="1000" inputmode="numeric"
         class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
+      <p class="text-xs text-gray-400 mt-2">Укажите <code class="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">0</code> — лимит снимется, модель напишет столько, сколько нужно (до заполнения контекста).</p>
     </section>
 
     <!-- System prompt -->
@@ -419,8 +420,8 @@ $('form').addEventListener('submit', async e => {
 
   const numRaw = String($('num_predict').value).trim();
   const numPredict = Number(numRaw);
-  if (!numRaw || !Number.isInteger(numPredict) || numPredict < 64 || numPredict > 32768) {
-    toast('Num Predict: введите целое число от 64 до 32768', 'error');
+  if (!numRaw || !Number.isInteger(numPredict) || numPredict < 0 || (numPredict !== 0 && (numPredict < 64 || numPredict > 200000))) {
+    toast('Num Predict: 0 (без лимита) или целое число от 64 до 200000', 'error');
     $('num_predict').focus();
     return;
   }

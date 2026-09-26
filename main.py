@@ -303,6 +303,13 @@ def post_settings(body: SettingsIn) -> dict:
     if data.get("model") is not None and not str(data["model"]).strip():
         data.pop("model")
 
+    if data.get("num_predict") is not None:
+        value = int(data["num_predict"])
+        if value <= 0:
+            data["num_predict"] = 0
+        else:
+            data["num_predict"] = min(max(value, NUM_PREDICT_MIN), NUM_PREDICT_MAX)
+
     raw_dir = data.get("save_dir")
     if raw_dir is not None:
         raw_dir = str(raw_dir).strip() or DEFAULT_SAVE_DIR
@@ -388,6 +395,21 @@ NO_CONTENT_HINT = (
     "(например 2000–4000) или выберите модель без режима reasoning."
 )
 
+NUM_PREDICT_MIN = 64
+NUM_PREDICT_MAX = 200000
+
+
+def _num_predict(settings: dict) -> int:
+    """0/отрицательное значение в настройках = без лимита -> -1 для бэкендов."""
+    try:
+        value = int(settings.get("num_predict", 1000))
+    except (TypeError, ValueError):
+        value = 1000
+    if value <= 0:
+        return -1
+    return min(max(value, NUM_PREDICT_MIN), NUM_PREDICT_MAX)
+
+
 
 def _chunk_parts(chunk) -> tuple:
     if isinstance(chunk, dict):
@@ -413,7 +435,7 @@ def stream_ollama(settings: dict, messages: list) -> Iterator[str]:
         stream=True,
         options={
             "temperature": float(settings.get("temperature", 0.7)),
-            "num_predict": int(settings.get("num_predict", 1000)),
+            "num_predict": _num_predict(settings),
         },
     )
     got_content = False
@@ -434,7 +456,7 @@ def stream_lmstudio(settings: dict, messages: list) -> Iterator[str]:
         "model": settings.get("model"),
         "messages": messages,
         "temperature": float(settings.get("temperature", 0.7)),
-        "max_tokens": int(settings.get("num_predict", 1000)),
+        "max_tokens": _num_predict(settings),
         "stream": True,
     }
     got_content = False
