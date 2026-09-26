@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Статьи · Article Generator</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body { background:#f9fafb; }</style>
+</head>
+<body class="min-h-screen text-gray-700 antialiased">
+
+<header class="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-gray-200">
+  <div class="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
+    <a href="/static/index.html" class="flex items-center gap-2.5 group">
+      <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 grid place-items-center text-white text-lg shadow-sm group-hover:shadow-md transition-all">✨</span>
+      <span class="font-semibold text-gray-900 tracking-tight">Article<span class="text-indigo-600">Generator</span></span>
+    </a>
+    <nav class="flex items-center gap-1 text-sm">
+      <a href="/static/index.html" class="px-3.5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all">Создать</a>
+      <a href="/static/articles.html" class="px-3.5 py-2 rounded-lg font-medium bg-indigo-50 text-indigo-700 transition-all">Статьи</a>
+      <a href="/static/settings.html" class="px-3.5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all">Настройки</a>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-5 py-10">
+
+  <div class="flex flex-wrap items-end justify-between gap-4 mb-8">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900 tracking-tight">Статьи</h1>
+      <p class="text-gray-500 mt-1" id="counter">Загрузка…</p>
+    </div>
+    <a href="/static/index.html"
+       class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 text-white font-semibold shadow-sm hover:bg-indigo-700 hover:shadow-md active:scale-[.98] transition-all">
+      ➕ Создать новую
+    </a>
+  </div>
+
+  <!-- Loader -->
+  <div id="loader" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    <div class="h-44 rounded-2xl bg-white border border-gray-200 shadow-sm animate-pulse"></div>
+    <div class="h-44 rounded-2xl bg-white border border-gray-200 shadow-sm animate-pulse"></div>
+    <div class="h-44 rounded-2xl bg-white border border-gray-200 shadow-sm animate-pulse"></div>
+  </div>
+
+  <!-- Empty state -->
+  <div id="empty" class="hidden">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm px-6 py-20 text-center">
+      <div class="w-20 h-20 mx-auto rounded-3xl bg-indigo-50 border border-indigo-100 grid place-items-center text-4xl mb-5">🗂️</div>
+      <h2 class="text-xl font-semibold text-gray-900">Пока нет статей</h2>
+      <p class="text-gray-500 mt-2 max-w-sm mx-auto">Сгенерируйте первую статью — она появится здесь в виде карточки.</p>
+      <a href="/static/index.html"
+         class="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold shadow-sm hover:bg-indigo-700 transition-all">
+        ✨ Создать первую статью
+      </a>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div id="errorBox" class="hidden">
+    <div class="bg-white rounded-2xl border border-red-200 shadow-sm px-6 py-12 text-center">
+      <div class="text-4xl mb-3">⚠️</div>
+      <h2 class="text-lg font-semibold text-gray-900">Не удалось загрузить статьи</h2>
+      <p id="errorText" class="text-gray-500 mt-1 text-sm"></p>
+      <button onclick="load()" class="mt-5 px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-all">Повторить</button>
+    </div>
+  </div>
+
+  <div id="grid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+</main>
+
+<div id="toastRoot" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 items-end"></div>
+
+<!-- Modal -->
+<div id="confirmModal" class="hidden fixed inset-0 z-50 items-center justify-center p-5">
+  <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm" onclick="closeModal()"></div>
+  <div class="relative bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-md p-6">
+    <div class="w-12 h-12 rounded-xl bg-red-50 border border-red-100 grid place-items-center text-2xl mb-4">🗑️</div>
+    <h3 class="text-lg font-semibold text-gray-900">Удалить статью?</h3>
+    <p class="text-gray-500 text-sm mt-1.5">Действие необратимо — файл будет удалён с диска.</p>
+    <div class="flex justify-end gap-3 mt-6">
+      <button onclick="closeModal()" class="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-all">Отмена</button>
+      <button id="confirmDelete" class="px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-all">Удалить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let pendingId = null;
+
+function toast(message, type = 'success') {
+  const colors = { success:'bg-white border-emerald-200 text-emerald-700', error:'bg-white border-red-200 text-red-600', info:'bg-white border-indigo-200 text-indigo-700' };
+  const icons = { success:'✅', error:'⚠️', info:'ℹ️' };
+  const el = document.createElement('div');
+  el.className = `flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-lg text-sm font-medium ${colors[type]||colors.info} translate-x-4 opacity-0 transition-all duration-300`;
+  el.innerHTML = `<span>${icons[type]||icons.info}</span><span>${escapeHtml(message)}</span>`;
+  $('toastRoot').appendChild(el);
+  requestAnimationFrame(() => el.classList.remove('translate-x-4','opacity-0'));
+  setTimeout(() => { el.classList.add('translate-x-4','opacity-0'); setTimeout(()=>el.remove(),320); }, 3500);
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function stripHtml(html) {
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  return (d.textContent || '').replace(/\s+/g, ' ').trim();
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('ru-RU', { day:'2-digit', month:'long', year:'numeric' });
+  } catch (e) { return iso; }
+}
+
+async function load() {
+  $('loader').classList.remove('hidden');
+  $('loader').classList.add('grid');
+  $('empty').classList.add('hidden');
+  $('grid').classList.add('hidden');
+  $('errorBox').classList.add('hidden');
+
+  try {
+    const res = await fetch('/api/articles');
+    if (!res.ok) throw new Error(`Сервер ответил ${res.status}`);
+    const items = await res.json();
+
+    $('counter').textContent = items.length
+      ? `Всего: ${items.length} ${plural(items.length, ['статья','статьи','статей'])}`
+      : 'Статей пока нет';
+
+    if (!items.length) {
+      $('empty').classList.remove('hidden');
+      return;
+    }
+
+    const grid = $('grid');
+    grid.innerHTML = '';
+    for (const a of items) {
+      const preview = stripHtml(a.content || '').slice(0, 150);
+      const card = document.createElement('article');
+      card.className = 'group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 p-5 flex flex-col transition-all';
+      card.innerHTML = `
+        <div class="flex items-start justify-between gap-3">
+          <h3 class="font-semibold text-gray-900 leading-snug line-clamp-2">${escapeHtml(a.title || 'Без названия')}</h3>
+          <span class="shrink-0 w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 grid place-items-center text-sm">📄</span>
+        </div>
+        <p class="text-sm text-gray-500 mt-3 leading-relaxed flex-1">${preview ? escapeHtml(preview) + (stripHtml(a.content||'').length > 150 ? '…' : '') : '<span class="italic text-gray-400">Пустая статья</span>'}</p>
+        <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+          <span class="text-xs text-gray-400">${formatDate(a.created_at)}</span>
+          <div class="flex items-center gap-2">
+            <button data-del="${a.id}" title="Удалить"
+              class="w-8 h-8 rounded-lg border border-gray-200 text-gray-400 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all grid place-items-center">🗑</button>
+            <a href="/static/article.html?id=${encodeURIComponent(a.id)}"
+              class="px-3.5 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition-all">Открыть</a>
+          </div>
+        </div>`;
+      grid.appendChild(card);
+    }
+    grid.classList.remove('hidden');
+    grid.classList.add('grid');
+
+    grid.querySelectorAll('[data-del]').forEach(btn => {
+      btn.addEventListener('click', () => { pendingId = btn.dataset.del; openModal(); });
+    });
+  } catch (err) {
+    $('errorText').textContent = err.message || 'Неизвестная ошибка';
+    $('errorBox').classList.remove('hidden');
+    $('counter').textContent = '';
+  } finally {
+    $('loader').classList.add('hidden');
+    $('loader').classList.remove('grid');
+  }
+}
+
+function plural(n, forms) {
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return forms[2];
+  if (b > 1 && b < 5) return forms[1];
+  if (b === 1) return forms[0];
+  return forms[2];
+}
+
+function openModal() {
+  const m = $('confirmModal');
+  m.classList.remove('hidden');
+  m.classList.add('flex');
+}
+function closeModal() {
+  const m = $('confirmModal');
+  m.classList.add('hidden');
+  m.classList.remove('flex');
+  pendingId = null;
+}
+
+$('confirmDelete').addEventListener('click', async () => {
+  if (!pendingId) return;
+  const id = pendingId;
+  $('confirmDelete').disabled = true;
+  try {
+    const res = await fetch(`/api/articles/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Не удалось удалить статью');
+    toast('Статья удалена', 'success');
+    closeModal();
+    await load();
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    $('confirmDelete').disabled = false;
+  }
+});
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+load();
+</script>
+</body>
+</html>
