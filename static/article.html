@@ -179,6 +179,22 @@ function setDirty(v) {
   dirty = v;
   $('dirtyHint').classList.toggle('hidden', !v);
 }
+
+async function applySendAvailability() {
+  try {
+    const res = await fetch('/api/settings');
+    if (!res.ok) return;
+    const s = await res.json();
+    const hasTarget = Boolean(String(s.target_server_url || '').trim());
+    const btn = $('sendBtn');
+    btn.disabled = !hasTarget;
+    btn.classList.toggle('opacity-50', !hasTarget);
+    btn.classList.toggle('cursor-not-allowed', !hasTarget);
+    btn.title = hasTarget ? '' : 'URL сервера не задан — укажите его в настройках';
+  } catch (e) {
+    /* настройки недоступны — оставляем кнопку активной */
+  }
+}
 quill.on('text-change', () => setDirty(true));
 $('title').addEventListener('input', () => setDirty(true));
 
@@ -208,6 +224,7 @@ async function load() {
     $('loader').classList.add('hidden');
     $('content').classList.remove('hidden');
     setDirty(false);
+    applySendAvailability();
   } catch (err) {
     fail(err.message || 'Ошибка загрузки статьи');
   }

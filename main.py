@@ -293,8 +293,8 @@ def post_settings(body: SettingsIn) -> dict:
     data = body.model_dump(exclude_unset=True)
 
     target = data.get("target_server_url")
-    if target is not None and not str(target).strip():
-        raise HTTPException(status_code=400, detail="Target Server URL обязателен")
+    if target is not None:
+        data["target_server_url"] = str(target).strip()
 
     if data.get("provider") is not None:
         if data["provider"] not in {p["id"] for p in PROVIDERS}:

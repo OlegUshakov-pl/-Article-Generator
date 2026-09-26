@@ -153,14 +153,14 @@
       <div class="flex items-center gap-3 mb-4">
         <span class="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 grid place-items-center text-lg">📡</span>
         <div>
-          <h2 class="font-semibold text-gray-900">Target Server URL <span class="text-red-500">*</span></h2>
-          <p class="text-xs text-gray-500">Куда отправлять статьи по кнопке «Выслать на сервер»</p>
+          <h2 class="font-semibold text-gray-900">Target Server URL</h2>
+          <p class="text-xs text-gray-500">Необязательно. Куда отправлять статьи по кнопке «Выслать на сервер»</p>
         </div>
       </div>
-      <input id="target_server_url" type="url" required
+      <input id="target_server_url" type="url"
         class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
         placeholder="https://example.com/api/receive">
-      <p class="text-xs text-gray-400 mt-2">Пример: <code class="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">https://example.com/api/receive</code></p>
+      <p class="text-xs text-gray-400 mt-2">Оставьте пустым, если статьи нужны только в папке. Пример: <code class="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">https://example.com/api/receive</code></p>
     </section>
 
     <div class="flex items-center justify-between gap-3 pt-1">
@@ -433,12 +433,7 @@ $('form').addEventListener('submit', async e => {
 
   const urlField = $('target_server_url');
   const targetUrl = urlField.value.trim();
-  if (!targetUrl) {
-    toast('Target Server URL обязателен', 'error');
-    urlField.focus();
-    return;
-  }
-  if (!urlField.checkValidity()) {
+  if (targetUrl && !urlField.checkValidity()) {
     toast('Некорректный URL. Пример: https://example.com/api/receive', 'error');
     urlField.focus();
     return;
