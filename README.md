@@ -1,69 +1,69 @@
 # Article Generator
 
-Локальный веб-сервис для генерации статей: описываешь тему → модель пишет текст в реальном времени → правишь в редакторе → сохраняешь, экспортируешь или отправляешь на другой сервер.
+A local web service for generating articles: describe a topic → the model writes text in real time → edit it in the editor → save, export, or send it to another server.
 
-Работает без интернета (кроме CDN с Tailwind и Quill), без базы данных, без авторизации и оплаты.
+Works without internet (except for the Tailwind and Quill CDNs), without a database, without authorization, and without payment.
 
 ---
 
-## Что умеет
+## Features
 
-| Страница | Возможности |
+| Page | Capabilities |
 |---|---|
-| **Создать** (`/static/index.html`) | Описание → стриминг ответа от Ollama / LM Studio прямо в Rich Text Editor (Quill) → заголовок → сохранение |
-| **Статьи** (`/static/articles.html`) | Карточки со всеми статьями, превью, открытие, удаление с подтверждением |
-| **Статья** (`/static/article.html`) | Правка заголовка и текста, экспорт в `.json` / `.md` / `.txt`, отправка на внешний сервер |
-| **Настройки** (`/static/settings.html`) | Источник моделей (Ollama / LM Studio), выбор модели, папка хранения статей, temperature, num predict, system prompt, target server URL |
+| **Create** (`/static/index.html`) | Description → streaming response from Ollama / LM Studio right into the Rich Text Editor (Quill) → title → save |
+| **Articles** (`static/articles.html`) | Cards with all articles, preview, open, delete with confirmation |
+| **Article** (`/static/article.html`) | Edit title and text, export to `.json` / `.md` / `.txt`, send to an external server |
+| **Settings** (`/static/settings.html`) | Model provider (Ollama / LM Studio), model selection, article storage folder, temperature, num predict, system prompt, target server URL |
 
 ---
 
-## Требования
+## Requirements
 
-* **Python 3.10+** (проверить: `python --version`)
-* **Ollama** и/или **LM Studio** — хотя бы один источник моделей
-* Браузер (Chrome, Edge, Firefox, Safari)
+* **Python 3.10+** (check: `python --version`)
+* **Ollama** and/or **LM Studio** — at least one model provider
+* A browser (Chrome, Edge, Firefox, Safari)
 
 ---
 
-## Установка источника моделей
+## Installing a Model Provider
 
-### Вариант 1 — Ollama
+### Option 1 — Ollama
 
-1. Скачайте и установите: <https://ollama.com/download>
-2. Запустите приложение (иконка в трее) или выполните в терминале:
+1. Download and install: <https://ollama.com/download>
+2. Launch the app (tray icon) or run in the terminal:
    ```bash
    ollama serve
    ```
-3. Скачайте модель, например:
+3. Pull a model, for example:
    ```bash
    ollama pull qwen2.5:7b
    ```
-   Другие варианты: `llama3.2:3b`, `mistral:7b`, `gemma2:9b`, `qwen2.5:14b`.
+   Other options: `llama3.2:3b`, `mistral:7b`, `gemma2:9b`, `qwen2.5:14b`.
 
-Сервер по умолчанию слушает `http://127.0.0.1:11434`.
-Другой адрес задаётся переменной окружения `OLLAMA_HOST`.
+The server listens on `http://127.0.0.1:11434` by default.
+A different address can be set via the `OLLAMA_HOST` environment variable.
 
-### Вариант 2 — LM Studio
+### Option 2 — LM Studio
 
-1. Скачайте и установите: <https://lmstudio.ai>
-2. Запустите LM Studio → вкладка **Developer** (или иконка сервера) → нажмите **Start Server**.
-3. Загрузите любую модель (GGUF) через вкладку **Search**.
+1. Download and install: <https://lmstudio.ai>
+2. Launch LM Studio → **Developer** tab (or server icon) → click **Start Server**.
+3. Load any model (GGUF) via the **Search** tab.
 
-OpenAI-совместимый сервер по умолчанию работает на `http://127.0.0.1:1234`.
-Другой адрес задаётся переменной окружения `LMSTUDIO_BASE_URL`.
+The OpenAI-compatible server runs on `http://127.0.0.1:1234` by default.
+A different address can be set via the `LMSTUDIO_BASE_URL` environment variable.
 
-> Если программа не запущена или не установлена, страница настроек прямо об этом напишет:
-> «Ollama не установлена», «Ollama не запущена», «LM Studio не установлена», «LM Studio не запущена».
+> If the program is not running or not installed, the settings page will say so directly:
+> "Ollama not installed", "Ollama not running", "LM Studio not installed", "LM Studio not running".
 
 ---
 
-## Запуск
+## Running
 
-### Быстрый способ (Windows)
+### Quick way (Windows)
 
-Дважды кликните **`start.bat`** — скрипт сам создаст виртуальное окружение, поставит зависимости и поднимет сервер на <http://127.0.0.1:8000>.
+Double-click **`start.bat`** — the script will create a virtual environment, install dependencies, and start the server at <http://127.0.0.1:8000>.
 
-### Ручной способ
+### Manual way
 
 ```bash
 python -m venv .venv
@@ -74,40 +74,40 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-Остановить сервер: `Ctrl+C`.
+Stop the server: `Ctrl+C`.
 
 ---
 
-## Настройки, которые стоит проверить в первую очередь
+## Settings to Check First
 
-Откройте **Настройки**:
+Open **Settings**:
 
-1. **Источник моделей** — выберите Ollama или LM Studio (карточка подсветится, статус рядом). Нажмите «🔄 Обновить», если запустили приложение уже после открытия страницы.
-2. **Модель** — список моделей выбранного источника. Нажмите **💾 Сохранить**.
-3. **Где сохранять статьи** — папка на диске. Можно указать путь вручную (`D:\MyArticles`), воспользоваться «📂 Обзор…» или быстрой кнопкой `articles`. При смене папки уже сохранённые статьи **переезжают** в новую.
-4. **Temperature** — от 0 (точно) до 2 (творчески), обычно 0.6–0.9.
-5. **Num Predict** — максимум токенов в ответе: от 64 до 200000, либо `0` — без лимита (модель пишет столько, сколько нужно, до заполнения контекста).
-6. **System Prompt** — роль и стиль модели.
-7. **Target Server URL** — *необязательно*. Адрес, на который уходит кнопка «Выслать на сервер» (`https://example.com/api/receive`). Если поле пустое, кнопка «Выслать на сервер» на странице статьи будет недоступна — статьи просто хранятся в папке.
+1. **Model provider** — choose Ollama or LM Studio (the card will highlight, with the status next to it). Click "🔄 Refresh" if you launched the app after opening the page.
+2. **Model** — list of models from the selected provider. Click **💾 Save**.
+3. **Where to store articles** — a folder on disk. You can enter a path manually (`D:\MyArticles`), use "📂 Browse…" or the quick `articles` button. When changing the folder, already saved articles **move** to the new one.
+4. **Temperature** — from 0 (precise) to 2 (creative), usually 0.6–0.9.
+5. **Num Predict** — maximum tokens in the response: from 64 to 200000, or `0` for no limit (the model writes as much as needed, up to filling the context).
+6. **System Prompt** — the model's role and style.
+7. **Target Server URL** — *optional*. The address used by the "Send to server" button (`https://example.com/api/receive`). If the field is empty, the "Send to server" button on the article page will be disabled — articles are simply stored in the folder.
 
-Все значения хранятся в `settings.json` в корне проекта.
+All values are stored in `settings.json` in the project root.
 
 ---
 
-## Хранение данных
+## Data Storage
 
-* **Статьи** — отдельный JSON-файл на статью: `{id}.json`
-* **Настройки** — `settings.json`
-* Базы данных нет, всё лежит обычными файлами
+* **Articles** — one JSON file per article: `{id}.json`
+* **Settings** — `settings.json`
+* No database, everything is plain files
 
-Формат статьи:
+Article format:
 
 ```json
 {
   "id": "uuid",
-  "title": "Заголовок",
-  "content": "<p>HTML из редактора</p>",
-  "prompt": "Исходное описание",
+  "title": "Title",
+  "content": "<p>HTML from the editor</p>",
+  "prompt": "Original description",
   "created_at": "2026-05-13T10:00:00",
   "updated_at": "2026-05-13T10:00:00"
 }
@@ -115,72 +115,72 @@ uvicorn main:app --reload
 
 ---
 
-## Экспорт
+## Export
 
-На странице статьи выберите формат в выпадающем списке рядом с кнопкой «Экспорт»:
+On the article page, select a format from the dropdown next to the "Export" button:
 
-| Формат | Содержимое |
+| Format | Contents |
 |---|---|
-| `.json` | Полный объект статьи (title, content, prompt, даты) |
-| `.md` | Markdown: заголовки, списки, цитаты, жирный, курсив, ссылки, код |
-| `.txt` | Чистый текст без разметки |
+| `.json` | Full article object (title, content, prompt, dates) |
+| `.md` | Markdown: headings, lists, quotes, bold, italic, links, code |
+| `.txt` | Plain text without markup |
 
-Файл скачивается как `article_{id}.{расширение}`.
+The file downloads as `article_{id}.{extension}`.
 
 ---
 
 ## API
 
-| Метод | Путь | Описание |
+| Method | Path | Description |
 |---|---|---|
-| `GET` | `/api/providers` | Статус Ollama / LM Studio + списки моделей |
-| `GET` | `/api/models` | Модели выбранного источника |
-| `GET` `/POST` | `/api/settings` | Чтение и запись настроек |
-| `POST` | `/api/generate` | Стриминг текста от модели (`{"prompt": "..."}`) |
-| `GET` | `/api/articles` | Список статей (новые сверху) |
-| `POST` | `/api/articles` | Создать статью (`{title, content, prompt}`) |
-| `GET` `/PUT` `/DELETE` | `/api/articles/{id}` | Чтение, обновление, удаление |
-| `POST` | `/api/send/{id}` | Отправить статью на `target_server_url` |
-| `GET` | `/api/fs/list?path=` | Подпапки для выбора места хранения |
-| `GET` | `/` | Редирект на `/static/index.html` |
+| `GET` | `/api/providers` | Ollama / LM Studio status + model lists |
+| `GET` | `/api/models` | Models of the selected provider |
+| `GET` `/POST` | `/api/settings` | Read and write settings |
+| `POST` | `/api/generate` | Streaming text from the model (`{"prompt": "..."}`) |
+| `GET` | `/api/articles` | List of articles (newest first) |
+| `POST` | `/api/articles` | Create an article (`{title, content, prompt}`) |
+| `GET` `/PUT` `/DELETE` | `/api/articles/{id}` | Read, update, delete |
+| `POST` | `/api/send/{id}` | Send an article to `target_server_url` |
+| `GET` | `/api/fs/list?path=` | Subfolders for choosing a storage location |
+| `GET` | `/` | Redirect to `/static/index.html` |
 
-Интерактивная документация: <http://127.0.0.1:8000/docs>
-
----
-
-## Стек
-
-* **Backend** — FastAPI + Uvicorn, библиотеки `ollama` и `httpx`
-* **Frontend** — ванильный HTML / JS, Tailwind CSS (CDN), Quill.js 2.0.3 (CDN)
-* **Хранение** — файловая система, без БД
+Interactive documentation: <http://127.0.0.1:8000/docs>
 
 ---
 
-## Решение проблем
+## Tech Stack
 
-| Симптом | Что сделать |
+* **Backend** — FastAPI + Uvicorn, `ollama` and `httpx` libraries
+* **Frontend** — vanilla HTML / JS, Tailwind CSS (CDN), Quill.js 2.0.3 (CDN)
+* **Storage** — file system, no database
+
+---
+
+## Troubleshooting
+
+| Symptom | What to do |
 |---|---|
-| «Ollama не установлена» / «LM Studio не установлена» | Установите приложение или выберите другой источник |
-| «Ollama не запущена» | Запустите Ollama / `ollama serve`, затем на странице настроек нажмите «🔄 Обновить» |
-| «LM Studio не запущена» | В LM Studio откройте вкладку Developer → **Start Server** |
-| Пустой список моделей | Скачайте модель (`ollama pull ...` или через вкладку Search в LM Studio) |
-| Кнопка «Выслать на сервер» серая и не нажимается | Заполните Target Server URL в настройках (поле необязательное) |
-| Порт 8000 занят | `uvicorn main:app --port 8001` или освободите порт |
-| Страница не открывается | Проверьте, что окно терминала не закрыто, и сервер запущен |
+| "Ollama not installed" / "LM Studio not installed" | Install the app or choose another provider |
+| "Ollama not running" | Start Ollama / `ollama serve`, then click "🔄 Refresh" on the settings page |
+| "LM Studio not running" | In LM Studio open the Developer tab → **Start Server** |
+| Empty model list | Pull a model (`ollama pull ...` or via the Search tab in LM Studio) |
+| "Send to server" button is grey and unclickable | Fill in Target Server URL in settings (the field is optional) |
+| Port 8000 is busy | `uvicorn main:app --port 8001` or free up the port |
+| Page does not open | Check that the terminal window is not closed and the server is running |
 
 ---
 
-## Структура проекта
+## Project Structure
 
 ```
-main.py            # FastAPI: API, стриминг, провайдеры, файловое хранилище
-start.bat          # Запуск на Windows (venv + зависимости + uvicorn)
+main.py            # FastAPI: API, streaming, providers, file storage
+start.bat          # Windows launcher (venv + dependencies + uvicorn)
 requirements.txt   # fastapi, uvicorn, ollama, httpx
-settings.json      # Настройки (создаётся автоматически)
-articles/          # Статьи по умолчанию (путь меняется в настройках)
+settings.json      # Settings (created automatically)
+articles/          # Default articles folder (path can be changed in settings)
 static/
-  index.html       # Создание статьи
-  articles.html    # Список статей
-  article.html     # Редактирование и экспорт
-  settings.html    # Настройки
+  index.html       # Create article
+  articles.html    # Articles list
+  article.html     # Edit and export
+  settings.html    # Settings
 ```
