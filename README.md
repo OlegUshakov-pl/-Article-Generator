@@ -1,3 +1,5 @@
+![Main](./images/Main.png)
+![Settings](./images/Settings.png)
 # Article Generator
 
 A local web service for generating articles: describe a topic → the model writes text in real time → edit it in the editor → save, export, or send it to another server.
