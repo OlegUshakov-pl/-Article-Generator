@@ -1,18 +1,20 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en" data-title-key="doc.index">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Создать статью · Article Generator</title>
+<title>Create Article · Article Generator</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+<script src="/static/i18n.js"></script>
 <script>
 tailwind.config = {
   theme: { extend: { colors: { brand: { 50:'#eef2ff',100:'#e0e7ff',500:'#6366f1',600:'#4f46e5',700:'#4338ca' } } } }
 }
 </script>
 <style>
+  *, *::before, *::after { border-radius: 0 !important; }
   body { background:#f9fafb; }
   #editor-container { min-height: 340px; background:#fff; }
   #editor-container.ql-container.ql-snow { border:0; font-size:16px; }
@@ -49,9 +51,9 @@ tailwind.config = {
       <span class="font-semibold text-gray-900 tracking-tight">Article<span class="text-indigo-600">Generator</span></span>
     </a>
     <nav class="flex items-center gap-1 text-sm">
-      <a href="/static/index.html" class="px-3.5 py-2 rounded-lg font-medium bg-indigo-50 text-indigo-700 transition-all">Создать</a>
-      <a href="/static/articles.html" class="px-3.5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all">Статьи</a>
-      <a href="/static/settings.html" class="px-3.5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all">Настройки</a>
+      <a href="/static/index.html" class="px-3.5 py-2 rounded-lg font-medium bg-indigo-50 text-indigo-700 transition-all" data-i18n="nav.create">Create</a>
+      <a href="/static/articles.html" class="px-3.5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all" data-i18n="nav.articles">Articles</a>
+      <a href="/static/settings.html" class="px-3.5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all" data-i18n="nav.settings">Settings</a>
     </nav>
   </div>
 </header>
@@ -59,29 +61,31 @@ tailwind.config = {
 <main class="max-w-4xl mx-auto px-5 py-10">
 
   <div class="text-center mb-8">
-    <h1 class="text-3xl font-bold text-gray-900 tracking-tight">Создать статью</h1>
-    <p class="text-gray-500 mt-2">Опишите тему — Ollama напишет текст, вы сможете отредактировать его в редакторе.</p>
+    <h1 class="text-3xl font-bold text-gray-900 tracking-tight" data-i18n="index.h1">Create Article</h1>
+    <p class="text-gray-500 mt-2" data-i18n="index.sub">Describe a topic — Ollama will write the text, and you can edit it in the editor.</p>
   </div>
 
   <!-- Prompt -->
   <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
     <label for="prompt" class="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-2">
-      <span>Описание статьи</span>
+      <span data-i18n="index.promptLabel">Article description</span>
       <span class="text-[11px] font-normal px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">prompt</span>
     </label>
     <textarea id="prompt" rows="5"
       class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-y"
-      placeholder="Например: подробная статья о том, как локальные LLM изменили разработку в 2026 году, с примерами и выводами..."></textarea>
+      data-i18n-ph="index.promptPh"
+      placeholder="For example: a detailed article about how local LLMs changed development in 2026, with examples and takeaways..."></textarea>
 
     <div class="flex flex-wrap items-center gap-3 mt-4">
       <button id="generateBtn"
         class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold shadow-sm hover:bg-indigo-700 hover:shadow-md active:scale-[.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed">
         <span id="generateIcon">✨</span>
-        <span id="generateText">Сгенерировать</span>
+        <span id="generateText" data-i18n="index.generate">Generate</span>
       </button>
       <button id="clearBtn"
-        class="px-5 py-3 rounded-xl border border-gray-200 bg-white text-gray-600 font-medium hover:bg-gray-50 hover:text-gray-900 transition-all">
-        Очистить
+        class="px-5 py-3 rounded-xl border border-gray-200 bg-white text-gray-600 font-medium hover:bg-gray-50 hover:text-gray-900 transition-all"
+        data-i18n="index.clear">
+        Clear
       </button>
       <span id="statusText" class="text-sm text-gray-400"></span>
     </div>
@@ -92,15 +96,15 @@ tailwind.config = {
     <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-        <h2 class="font-semibold text-gray-900">Результат</h2>
+        <h2 class="font-semibold text-gray-900" data-i18n="index.result">Result</h2>
       </div>
-      <span id="streamBadge" class="hidden text-[11px] font-medium px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100 pulse-soft">генерация...</span>
+      <span id="streamBadge" class="hidden text-[11px] font-medium px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100 pulse-soft" data-i18n="index.badge">generating...</span>
     </div>
 
     <div id="editor-empty" class="px-6 py-16 text-center">
       <div class="w-16 h-16 mx-auto rounded-2xl bg-gray-50 border border-gray-200 grid place-items-center text-3xl mb-4">📝</div>
-      <p class="text-gray-500 font-medium">Здесь появится текст статьи</p>
-      <p class="text-sm text-gray-400 mt-1">Введите описание выше и нажмите «Сгенерировать»</p>
+      <p class="text-gray-500 font-medium" data-i18n="index.emptyTitle">The article text will appear here</p>
+      <p class="text-sm text-gray-400 mt-1" data-i18n="index.emptyHint">Enter a description above and click "Generate"</p>
     </div>
 
     <div id="editorWrap" class="hidden">
@@ -127,17 +131,18 @@ tailwind.config = {
 
   <!-- Save -->
   <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-    <label for="title" class="block text-sm font-semibold text-gray-900 mb-2">Заголовок статьи</label>
+    <label for="title" class="block text-sm font-semibold text-gray-900 mb-2" data-i18n="index.titleLabel">Article title</label>
     <input id="title" type="text"
       class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-      placeholder="Заголовок будет использован в списке статей">
+      data-i18n-ph="index.titlePh"
+      placeholder="The title will be used in the articles list">
 
     <div class="flex items-center justify-end gap-3 mt-5">
-      <a href="/static/articles.html" class="px-5 py-3 rounded-xl border border-gray-200 bg-white text-gray-600 font-medium hover:bg-gray-50 transition-all">К списку статей</a>
+      <a href="/static/articles.html" class="px-5 py-3 rounded-xl border border-gray-200 bg-white text-gray-600 font-medium hover:bg-gray-50 transition-all" data-i18n="index.toArticles">Back to articles</a>
       <button id="saveBtn"
         class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold shadow-sm hover:bg-indigo-700 hover:shadow-md active:scale-[.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         disabled>
-        💾 Сохранить
+        <span data-i18n="common.save">💾 Save</span>
       </button>
     </div>
   </section>
@@ -147,14 +152,18 @@ tailwind.config = {
 
 <script>
 const $ = (id) => document.getElementById(id);
+const T = window.I18N.t;
+
+I18N.apply();
 
 const quill = new Quill('#editor-container', {
   theme: 'snow',
-  placeholder: 'Текст статьи появится здесь...',
+  placeholder: T('index.quillPh'),
   modules: {
     toolbar: '#toolbar'
   }
 });
+I18N.onChange(() => { quill.root.setAttribute('data-placeholder', T('index.quillPh')); });
 
 function toast(message, type = 'success') {
   const colors = {
@@ -280,7 +289,7 @@ function renderResult() {
 
 $('generateBtn').addEventListener('click', async () => {
   const prompt = $('prompt').value.trim();
-  if (!prompt) { toast('Введите описание статьи', 'error'); $('prompt').focus(); return; }
+  if (!prompt) { toast(T('index.needPrompt'), 'error'); $('prompt').focus(); return; }
   if (streaming) return;
 
   streaming = true;
@@ -289,17 +298,17 @@ $('generateBtn').addEventListener('click', async () => {
   lastPrompt = prompt;
   $('generateBtn').disabled = true;
   $('generateIcon').textContent = '⏳';
-  $('generateText').textContent = 'Генерируем...';
+  $('generateText').textContent = T('index.generating');
   $('streamBadge').classList.remove('hidden');
-  $('statusText').textContent = 'Стримим ответ модели…';
+  $('statusText').textContent = T('index.streaming');
 
   const startedAt = Date.now();
   const thinkTimer = setInterval(() => {
     const sec = Math.round((Date.now() - startedAt) / 1000);
     if (streaming && !raw.trim()) {
       $('statusText').textContent = sec < 3
-        ? `Стримим ответ модели… ${sec} c`
-        : `Модель думает… ${sec} c`;
+        ? T('index.streamingSec', { s: sec })
+        : T('index.thinkingSec', { s: sec });
     }
   }, 1000);
   quill.setContents([], 'silent');
@@ -313,7 +322,7 @@ $('generateBtn').addEventListener('click', async () => {
     });
 
     if (!res.ok) {
-      let detail = 'Ошибка генерации';
+      let detail = T('index.genError');
       try { detail = (await res.json()).detail || detail; } catch (e) {}
       throw new Error(detail);
     }
@@ -326,23 +335,23 @@ $('generateBtn').addEventListener('click', async () => {
       const { done, value } = await reader.read();
       if (done) break;
       const chunk = decoder.decode(value, { stream: true });
-      if (chunk.includes('[ОШИБКА]')) hasError = true;
+      if (chunk.includes('[ОШИБКА]') || chunk.includes('[ERROR]')) hasError = true;
       raw += chunk;
       renderResult();
-      $('statusText').textContent = `${raw.length} символов`;
+      $('statusText').textContent = T('index.chars', { n: raw.length });
     }
 
-    if (hasError) toast('Ollama вернула ошибку — подробности в тексте', 'error');
-    else if (raw.trim()) toast('Статья сгенерирована', 'success');
-    else toast('Пустой ответ от модели', 'error');
+    if (hasError) toast(T('index.ollamaError'), 'error');
+    else if (raw.trim()) toast(T('index.generated'), 'success');
+    else toast(T('index.emptyResponse'), 'error');
   } catch (err) {
-    toast(err.message || 'Не удалось выполнить запрос', 'error');
+    toast(err.message || T('index.requestFailed'), 'error');
   } finally {
     clearInterval(thinkTimer);
     streaming = false;
     $('generateBtn').disabled = false;
     $('generateIcon').textContent = '✨';
-    $('generateText').textContent = 'Сгенерировать';
+    $('generateText').textContent = T('index.generate');
     $('streamBadge').classList.add('hidden');
     if (!$('statusText').textContent) $('statusText').textContent = '';
   }
@@ -356,14 +365,14 @@ $('clearBtn').addEventListener('click', () => {
   $('prompt').value = '';
   $('statusText').textContent = '';
   renderResult();
-  toast('Поле очищено', 'info');
+  toast(T('index.cleared'), 'info');
 });
 
 saveBtn.addEventListener('click', async () => {
   const title = $('title').value.trim();
   const content = quill.root.innerHTML;
-  if (!title) { toast('Укажите заголовок статьи', 'error'); $('title').focus(); return; }
-  if (!content || content === '<p><br></p>') { toast('Контент пустой', 'error'); return; }
+  if (!title) { toast(T('index.needTitle'), 'error'); $('title').focus(); return; }
+  if (!content || content === '<p><br></p>') { toast(T('index.emptyContent'), 'error'); return; }
 
   saveBtn.disabled = true;
   try {
@@ -372,10 +381,10 @@ saveBtn.addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title, content, prompt: lastPrompt })
     });
-    if (!res.ok) throw new Error('Не удалось сохранить статью');
+    if (!res.ok) throw new Error(T('index.saveFailed'));
     const data = await res.json();
     saveId = data.id;
-    toast('Статья сохранена', 'success');
+    toast(T('index.saved'), 'success');
     setTimeout(() => { location.href = `/static/article.html?id=${saveId}`; }, 700);
   } catch (err) {
     toast(err.message, 'error');

@@ -19,16 +19,88 @@ STATIC_DIR = BASE_DIR / "static"
 SETTINGS_FILE = BASE_DIR / "settings.json"
 
 DEFAULT_SAVE_DIR = "articles"
+DEFAULT_LANGUAGE = "en"
+LANGUAGES = ("en", "ru")
+
+DEFAULT_SYSTEM_PROMPTS = {
+    "en": "You are a helpful assistant that writes high-quality articles.",
+    "ru": "Ты полезный ассистент, который пишет качественные статьи.",
+}
+
+MESSAGES = {
+    "en": {
+        "invalid_article_id": "Invalid article id",
+        "article_not_found": "Article not found",
+        "read_article_failed": "Failed to read the article",
+        "provider_connected": "{name} connected",
+        "provider_not_running": "{name} not running",
+        "provider_not_installed": "{name} not installed",
+        "install_or_choose": "{name} is not installed. Install it or choose another provider.",
+        "start_app": "{name} is not running. Open the app and wait for the model to load.",
+        "unknown_provider": "Unknown model provider",
+        "unknown_language": "Unsupported language",
+        "cannot_create_folder": "Cannot create folder: {exc}",
+        "no_folder_access": "No access to this folder",
+        "cannot_open_folder": "Cannot open the folder: {exc}",
+        "empty_prompt": "Article description cannot be empty",
+        "no_models": "{name} is running, but no models were found. Download a model.",
+        "untitled": "Untitled",
+        "target_url_missing": "Target server URL is not set. Set it in settings.",
+        "send_failed": "Failed to send the article: {exc}",
+        "server_error": "The server responded with an error {status}",
+        "error_marker": "[ERROR]",
+        "no_content_hint": (
+            "\n\n[ERROR] The model spent its entire token budget on internal "
+            "reasoning (thinking) and returned no text. Increase Num Predict in "
+            "settings (e.g. 2000-4000) or pick a model without reasoning mode."
+        ),
+    },
+    "ru": {
+        "invalid_article_id": "Некорректный id статьи",
+        "article_not_found": "Статья не найдена",
+        "read_article_failed": "Не удалось прочитать статью",
+        "provider_connected": "{name} подключена",
+        "provider_not_running": "{name} не запущена",
+        "provider_not_installed": "{name} не установлена",
+        "install_or_choose": "{name} не установлена. Установите её или выберите другой источник.",
+        "start_app": "{name} не запущена. Откройте приложение и дождитесь загрузки модели.",
+        "unknown_provider": "Неизвестный источник моделей",
+        "unknown_language": "Неподдерживаемый язык",
+        "cannot_create_folder": "Невозможно создать папку: {exc}",
+        "no_folder_access": "Нет доступа к этой папке",
+        "cannot_open_folder": "Не удалось открыть папку: {exc}",
+        "empty_prompt": "Описание статьи не может быть пустым",
+        "no_models": "{name} запущена, но модели не найдены. Загрузите модель.",
+        "untitled": "Без названия",
+        "target_url_missing": "URL сервера не задан. Укажите его в настройках.",
+        "send_failed": "Не удалось отправить статью: {exc}",
+        "server_error": "Сервер ответил ошибкой {status}",
+        "error_marker": "[ОШИБКА]",
+        "no_content_hint": (
+            "\n\n[ОШИБКА] Модель потратила весь лимит токенов на внутренние рассуждения "
+            "(thinking) и не вернула текст. Увеличьте Num Predict в настройках "
+            "(например 2000–4000) или выберите модель без режима reasoning."
+        ),
+    },
+}
 
 DEFAULT_SETTINGS = {
     "provider": "ollama",
     "model": "qwen2.5:7b",
     "temperature": 0.7,
-    "system_prompt": "Ты полезный ассистент, который пишет качественные статьи.",
+    "system_prompt": DEFAULT_SYSTEM_PROMPTS[DEFAULT_LANGUAGE],
     "num_predict": 1000,
     "target_server_url": "",
     "save_dir": DEFAULT_SAVE_DIR,
+    "language": DEFAULT_LANGUAGE,
 }
+
+
+def t(key: str, **fmt) -> str:
+    lang = read_settings().get("language") or DEFAULT_LANGUAGE
+    table = MESSAGES.get(lang) or MESSAGES[DEFAULT_LANGUAGE]
+    text = table.get(key) or MESSAGES[DEFAULT_LANGUAGE].get(key) or key
+    return text.format(**fmt) if fmt else text
 
 PROVIDERS = (
     {"id": "ollama", "name": "Ollama"},
@@ -64,6 +136,13 @@ def read_settings() -> dict:
         return dict(DEFAULT_SETTINGS)
     merged = dict(DEFAULT_SETTINGS)
     merged.update({k: v for k, v in data.items() if v is not None})
+    if "system_prompt" not in data:
+        merged["system_prompt"] = DEFAULT_SYSTEM_PROMPTS.get(
+            merged.get("language") or DEFAULT_LANGUAGE,
+            DEFAULT_SYSTEM_PROMPTS[DEFAULT_LANGUAGE],
+        )
+    if merged.get("language") not in LANGUAGES:
+        merged["language"] = DEFAULT_LANGUAGE
     return merged
 
 
@@ -93,10 +172,10 @@ def articles_dir() -> Path:
 
 def article_path(article_id: str, folder: Optional[Path] = None) -> Path:
     if not article_id or ".." in article_id or "/" in article_id or "\\" in article_id:
-        raise HTTPException(status_code=400, detail="Некорректный id статьи")
+        raise HTTPException(status_code=400, detail=t("invalid_article_id"))
     path = (folder or articles_dir()) / f"{article_id}.json"
     if not path.exists():
-        raise HTTPException(status_code=404, detail="Статья не найдена")
+        raise HTTPException(status_code=404, detail=t("article_not_found"))
     return path
 
 
@@ -104,7 +183,7 @@ def load_article(article_id: str) -> dict:
     try:
         return json.loads(article_path(article_id).read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
-        raise HTTPException(status_code=500, detail="Не удалось прочитать статью")
+        raise HTTPException(status_code=500, detail=t("read_article_failed"))
 
 
 def save_article(data: dict) -> None:
@@ -220,11 +299,11 @@ def provider_state(provider_id: str) -> dict:
         models = ollama_models() if running else []
 
     if running:
-        status, message = "ready", f"{meta['name']} подключена"
+        status, message = "ready", t("provider_connected", name=meta["name"])
     elif installed:
-        status, message = "not_running", f"{meta['name']} не запущена"
+        status, message = "not_running", t("provider_not_running", name=meta["name"])
     else:
-        status, message = "not_installed", f"{meta['name']} не установлена"
+        status, message = "not_installed", t("provider_not_installed", name=meta["name"])
 
     return {
         "id": meta["id"],
@@ -242,12 +321,12 @@ def require_provider(provider_id: str) -> dict:
     if state["status"] == "not_installed":
         raise HTTPException(
             status_code=503,
-            detail=f"{state['name']} не установлена. Установите её или выберите другой источник.",
+            detail=t("install_or_choose", name=state["name"]),
         )
     if state["status"] == "not_running":
         raise HTTPException(
             status_code=503,
-            detail=f"{state['name']} не запущена. Откройте приложение и дождитесь загрузки модели.",
+            detail=t("start_app", name=state["name"]),
         )
     return state
 
@@ -263,6 +342,7 @@ class SettingsIn(BaseModel):
     num_predict: Optional[int] = None
     target_server_url: Optional[str] = None
     save_dir: Optional[str] = None
+    language: Optional[str] = None
 
 
 class GenerateIn(BaseModel):
@@ -298,7 +378,12 @@ def post_settings(body: SettingsIn) -> dict:
 
     if data.get("provider") is not None:
         if data["provider"] not in {p["id"] for p in PROVIDERS}:
-            raise HTTPException(status_code=400, detail="Неизвестный источник моделей")
+            raise HTTPException(status_code=400, detail=t("unknown_provider"))
+
+    if data.get("language") is not None:
+        if str(data["language"]).lower() not in LANGUAGES:
+            raise HTTPException(status_code=400, detail=t("unknown_language"))
+        data["language"] = str(data["language"]).lower()
 
     if data.get("model") is not None and not str(data["model"]).strip():
         data.pop("model")
@@ -319,7 +404,7 @@ def post_settings(body: SettingsIn) -> dict:
             new_dir.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
             raise HTTPException(
-                status_code=400, detail=f"Невозможно создать папку: {exc}"
+                status_code=400, detail=t("cannot_create_folder", exc=exc)
             )
         old_raw = str(read_settings().get("save_dir") or DEFAULT_SAVE_DIR).strip()
         old_dir = resolve_dir(old_raw or DEFAULT_SAVE_DIR)
@@ -373,9 +458,9 @@ def fs_list(path: str = Query(default="")) -> dict:
         )
         dirs = [{"name": c.name, "path": str(c)} for c in children]
     except PermissionError:
-        raise HTTPException(status_code=403, detail="Нет доступа к этой папке")
+        raise HTTPException(status_code=403, detail=t("no_folder_access"))
     except OSError as exc:
-        raise HTTPException(status_code=400, detail=f"Не удалось открыть папку: {exc}")
+        raise HTTPException(status_code=400, detail=t("cannot_open_folder", exc=exc))
 
     parent = target.parent
     return {
@@ -389,11 +474,7 @@ def fs_list(path: str = Query(default="")) -> dict:
 # ----------------------------------------------------------------- generate
 
 
-NO_CONTENT_HINT = (
-    "\n\n[ОШИБКА] Модель потратила весь лимит токенов на внутренние рассуждения "
-    "(thinking) и не вернула текст. Увеличьте Num Predict в настройках "
-    "(например 2000–4000) или выберите модель без режима reasoning."
-)
+NO_CONTENT_HINT_KEY = "no_content_hint"
 
 NUM_PREDICT_MIN = 64
 NUM_PREDICT_MAX = 200000
@@ -448,7 +529,7 @@ def stream_ollama(settings: dict, messages: list) -> Iterator[str]:
             got_content = True
             yield content
     if not got_content and got_thinking:
-        yield NO_CONTENT_HINT
+        yield t(NO_CONTENT_HINT_KEY)
 
 
 def stream_lmstudio(settings: dict, messages: list) -> Iterator[str]:
@@ -468,7 +549,7 @@ def stream_lmstudio(settings: dict, messages: list) -> Iterator[str]:
             if response.status_code >= 400:
                 body = response.read().decode(errors="replace")[:400]
                 raise RuntimeError(
-                    f"LM Studio ответила ошибкой {response.status_code}: {body}"
+                    f"LM Studio returned error {response.status_code}: {body}"
                 )
             for line in response.iter_lines():
                 line = line.strip()
@@ -490,7 +571,7 @@ def stream_lmstudio(settings: dict, messages: list) -> Iterator[str]:
                     got_content = True
                     yield content
     if not got_content and got_thinking:
-        yield NO_CONTENT_HINT
+        yield t(NO_CONTENT_HINT_KEY)
 
 
 @app.post("/api/generate")
@@ -498,7 +579,7 @@ def generate(body: GenerateIn) -> StreamingResponse:
     prompt = (body.prompt or "").strip()
     if not prompt:
         raise HTTPException(
-            status_code=400, detail="Описание статьи не может быть пустым"
+            status_code=400, detail=t("empty_prompt")
         )
 
     settings = read_settings()
@@ -507,7 +588,7 @@ def generate(body: GenerateIn) -> StreamingResponse:
     if not state["models"]:
         raise HTTPException(
             status_code=400,
-            detail=f"{state['name']} запущена, но модели не найдены. Загрузите модель.",
+            detail=t("no_models", name=state["name"]),
         )
     if settings.get("model") not in state["models"]:
         settings["model"] = state["models"][0]
@@ -527,7 +608,7 @@ def generate(body: GenerateIn) -> StreamingResponse:
         try:
             yield from stream
         except Exception as exc:
-            yield f"\n\n[ОШИБКА] {exc}"
+            yield f"\n\n{t('error_marker')} {exc}"
 
     return StreamingResponse(
         event_stream(),
@@ -557,7 +638,7 @@ def create_article(body: ArticleCreate) -> dict:
     now = datetime.now().isoformat(timespec="seconds")
     data = {
         "id": str(uuid.uuid4()),
-        "title": body.title.strip() or "Без названия",
+        "title": body.title.strip() or t("untitled"),
         "content": body.content,
         "prompt": body.prompt,
         "created_at": now,
@@ -575,7 +656,7 @@ def get_article(article_id: str) -> dict:
 @app.put("/api/articles/{article_id}")
 def update_article(article_id: str, body: ArticleUpdate) -> dict:
     data = load_article(article_id)
-    data["title"] = body.title.strip() or data.get("title") or "Без названия"
+    data["title"] = body.title.strip() or data.get("title") or t("untitled")
     data["content"] = body.content
     data["updated_at"] = datetime.now().isoformat(timespec="seconds")
     save_article(data)
@@ -599,19 +680,19 @@ def send_article(article_id: str) -> dict:
     if not target:
         raise HTTPException(
             status_code=400,
-            detail="URL сервера не задан. Укажите его в настройках.",
+            detail=t("target_url_missing"),
         )
     try:
         with httpx.Client(timeout=30.0) as client:
             response = client.post(target, json=data)
     except httpx.HTTPError as exc:
         raise HTTPException(
-            status_code=502, detail=f"Не удалось отправить статью: {exc}"
+            status_code=502, detail=t("send_failed", exc=exc)
         )
     if response.status_code >= 400:
         raise HTTPException(
             status_code=502,
-            detail=f"Сервер ответил ошибкой {response.status_code}",
+            detail=t("server_error", status=response.status_code),
         )
     return {"ok": True, "status_code": response.status_code, "target": target}
 

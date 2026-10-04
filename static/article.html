@@ -1,13 +1,15 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en" data-title-key="doc.article">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Статья · Article Generator</title>
+<title>Article · Article Generator</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+<script src="/static/i18n.js"></script>
 <style>
+  *, *::before, *::after { border-radius: 0 !important; }
   body { background:#f9fafb; }
   #editor-container { min-height: 460px; background:#fff; }
   #editor-container.ql-container.ql-snow { border:0; font-size:16px; }
@@ -42,9 +44,9 @@
       <span class="font-semibold text-gray-900 tracking-tight">Article<span class="text-indigo-600">Generator</span></span>
     </a>
     <nav class="flex items-center gap-1 text-sm">
-      <a href="/static/index.html" class="px-3.5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all">Создать</a>
-      <a href="/static/articles.html" class="px-3.5 py-2 rounded-lg font-medium bg-indigo-50 text-indigo-700 transition-all">Статьи</a>
-      <a href="/static/settings.html" class="px-3.5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all">Настройки</a>
+      <a href="/static/index.html" class="px-3.5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all" data-i18n="nav.create">Create</a>
+      <a href="/static/articles.html" class="px-3.5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all" data-i18n="nav.articles">Articles</a>
+      <a href="/static/settings.html" class="px-3.5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all" data-i18n="nav.settings">Settings</a>
     </nav>
   </div>
 </header>
@@ -62,31 +64,32 @@
   <div id="errorBox" class="hidden">
     <div class="bg-white rounded-2xl border border-red-200 shadow-sm px-6 py-16 text-center">
       <div class="text-4xl mb-3">⚠️</div>
-      <h2 class="text-lg font-semibold text-gray-900">Статья не найдена</h2>
+      <h2 class="text-lg font-semibold text-gray-900" data-i18n="article.notFound">Article not found</h2>
       <p id="errorText" class="text-gray-500 mt-1 text-sm"></p>
-      <a href="/static/articles.html" class="inline-block mt-5 px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-all">К списку статей</a>
+      <a href="/static/articles.html" class="inline-block mt-5 px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-all" data-i18n="index.toArticles">Back to articles</a>
     </div>
   </div>
 
   <div id="content" class="hidden">
     <div class="flex items-center justify-between gap-4 mb-5">
-      <a href="/static/articles.html" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-indigo-600 transition-all">
-        ← Назад к статьям
+      <a href="/static/articles.html" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-indigo-600 transition-all" data-i18n="article.back">
+        ← Back to articles
       </a>
       <span id="meta" class="text-xs text-gray-400"></span>
     </div>
 
     <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-5">
-      <label for="title" class="block text-sm font-semibold text-gray-900 mb-2">Заголовок</label>
+      <label for="title" class="block text-sm font-semibold text-gray-900 mb-2" data-i18n="article.titleLabel">Title</label>
       <input id="title" type="text"
         class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 font-medium placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-        placeholder="Заголовок статьи">
+        data-i18n-ph="article.titlePh"
+        placeholder="Article title">
     </section>
 
     <section class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-5">
       <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
         <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
-        <h2 class="font-semibold text-gray-900">Контент</h2>
+        <h2 class="font-semibold text-gray-900" data-i18n="article.content">Content</h2>
       </div>
       <div id="toolbar">
         <button class="ql-bold"></button>
@@ -110,9 +113,9 @@
 
     <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
       <div class="flex flex-wrap items-center justify-end gap-3">
-        <a href="/static/articles.html" class="px-5 py-3 rounded-xl border border-gray-200 bg-white text-gray-600 font-medium hover:bg-gray-50 transition-all">Назад</a>
+        <a href="/static/articles.html" class="px-5 py-3 rounded-xl border border-gray-200 bg-white text-gray-600 font-medium hover:bg-gray-50 transition-all" data-i18n="common.back">Back</a>
         <div class="flex items-stretch">
-          <label for="exportFormat" class="sr-only">Формат экспорта</label>
+          <label for="exportFormat" class="sr-only" data-i18n="article.exportFormat">Export format</label>
           <select id="exportFormat"
             class="appearance-none rounded-l-xl border border-r-0 border-gray-200 bg-gray-50 px-3.5 py-3 pr-8 text-sm text-gray-600 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
             <option value="json">.json</option>
@@ -120,20 +123,22 @@
             <option value="txt">.txt</option>
           </select>
           <button id="exportBtn"
-            class="inline-flex items-center gap-2 -ml-px px-4 py-3 rounded-r-xl border border-gray-200 bg-white text-gray-600 text-sm font-medium hover:bg-gray-50 hover:text-gray-900 transition-all">
-            ⬇️ Экспорт
+            class="inline-flex items-center gap-2 -ml-px px-4 py-3 rounded-r-xl border border-gray-200 bg-white text-gray-600 text-sm font-medium hover:bg-gray-50 hover:text-gray-900 transition-all"
+            data-i18n="article.export">
+            ⬇️ Export
           </button>
         </div>
         <button id="sendBtn"
-          class="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 font-medium hover:bg-indigo-100 transition-all">
-          📤 Выслать на сервер
+          class="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 font-medium hover:bg-indigo-100 transition-all"
+          data-i18n="article.send">
+          📤 Send to server
         </button>
         <button id="saveBtn"
           class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold shadow-sm hover:bg-indigo-700 hover:shadow-md active:scale-[.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-          💾 Сохранить
+          <span data-i18n="common.save">💾 Save</span>
         </button>
       </div>
-      <p id="dirtyHint" class="hidden text-right text-xs text-amber-600 mt-3">Есть несохранённые изменения</p>
+      <p id="dirtyHint" class="hidden text-right text-xs text-amber-600 mt-3" data-i18n="article.unsaved">You have unsaved changes</p>
     </section>
   </div>
 </main>
@@ -142,13 +147,17 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
+const T = window.I18N.t;
 const id = new URLSearchParams(location.search).get('id');
+
+I18N.apply();
 
 const quill = new Quill('#editor-container', {
   theme: 'snow',
-  placeholder: 'Содержимое статьи...',
+  placeholder: T('article.quillPh'),
   modules: { toolbar: '#toolbar' }
 });
+I18N.onChange(() => { quill.root.setAttribute('data-placeholder', T('article.quillPh')); });
 
 function loadIntoQuill(html) {
   try {
@@ -190,9 +199,9 @@ async function applySendAvailability() {
     btn.disabled = !hasTarget;
     btn.classList.toggle('opacity-50', !hasTarget);
     btn.classList.toggle('cursor-not-allowed', !hasTarget);
-    btn.title = hasTarget ? '' : 'URL сервера не задан — укажите его в настройках';
+    btn.title = hasTarget ? '' : T('article.sendNoUrl');
   } catch (e) {
-    /* настройки недоступны — оставляем кнопку активной */
+    /* settings unavailable — keep the button active */
   }
 }
 quill.on('text-change', () => setDirty(true));
@@ -208,46 +217,46 @@ function fail(message) {
 }
 
 async function load() {
-  if (!id) { fail('В URL не передан параметр ?id='); return; }
+  if (!id) { fail(T('article.noId')); return; }
   try {
     const res = await fetch(`/api/articles/${encodeURIComponent(id)}`);
-    if (res.status === 404) { fail('Такой статьи не существует или она была удалена.'); return; }
-    if (!res.ok) throw new Error(`Сервер ответил ${res.status}`);
+    if (res.status === 404) { fail(T('article.missing')); return; }
+    if (!res.ok) throw new Error(T('common.serverResponded', { n: res.status }));
     const a = await res.json();
 
     $('title').value = a.title || '';
     loadIntoQuill(a.content || '');
     const created = (a.created_at || '').replace('T', ' ').slice(0, 16);
     const updated = (a.updated_at || '').replace('T', ' ').slice(0, 16);
-    $('meta').textContent = `Создано: ${created} · Обновлено: ${updated}`;
+    $('meta').textContent = T('article.meta', { c: created, u: updated });
 
     $('loader').classList.add('hidden');
     $('content').classList.remove('hidden');
     setDirty(false);
     applySendAvailability();
   } catch (err) {
-    fail(err.message || 'Ошибка загрузки статьи');
+    fail(err.message || T('article.loadError'));
   }
 }
 
 saveBtn.addEventListener('click', async () => {
   const title = $('title').value.trim();
   const content = quill.root.innerHTML;
-  if (!title) { toast('Укажите заголовок', 'error'); $('title').focus(); return; }
+  if (!title) { toast(T('article.needTitle'), 'error'); $('title').focus(); return; }
 
   saveBtn.disabled = true;
   const original = saveBtn.innerHTML;
-  saveBtn.innerHTML = '⏳ Сохраняем...';
+  saveBtn.innerHTML = T('common.saving');
   try {
     const res = await fetch(`/api/articles/${encodeURIComponent(id)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title, content })
     });
-    if (!res.ok) throw new Error('Не удалось сохранить изменения');
+    if (!res.ok) throw new Error(T('article.saveFailed'));
     await res.json();
     setDirty(false);
-    toast('Изменения сохранены', 'success');
+    toast(T('article.saved'), 'success');
   } catch (err) {
     toast(err.message, 'error');
   } finally {
@@ -359,7 +368,7 @@ $('exportBtn').addEventListener('click', async () => {
   const format = $('exportFormat').value;
   try {
     const res = await fetch(`/api/articles/${encodeURIComponent(id)}`);
-    if (!res.ok) throw new Error('Не удалось получить статью');
+    if (!res.ok) throw new Error(T('article.getFailed'));
     const data = await res.json();
     data.title = $('title').value.trim() || data.title;
     data.content = quill.root.innerHTML;
@@ -373,7 +382,7 @@ $('exportBtn').addEventListener('click', async () => {
       const txt = `${data.title}\n\n${htmlToText(data.content)}\n`;
       download(`article_${id}.txt`, txt, 'text/plain;charset=utf-8');
     }
-    toast(`Файл article_${id}.${format} скачан`, 'success');
+    toast(T('article.downloaded', { id: id, fmt: format }), 'success');
   } catch (err) {
     toast(err.message, 'error');
   }
@@ -383,12 +392,12 @@ $('sendBtn').addEventListener('click', async () => {
   const btn = $('sendBtn');
   const original = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = '⏳ Отправляем...';
+  btn.innerHTML = T('article.sending');
   try {
     const res = await fetch(`/api/send/${encodeURIComponent(id)}`, { method: 'POST' });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.detail || `Ошибка ${res.status}`);
-    toast(`Отправлено на ${data.target} (HTTP ${data.status_code})`, 'success');
+    if (!res.ok) throw new Error(data.detail || T('article.sendError', { n: res.status }));
+    toast(T('article.sent', { target: data.target, n: data.status_code }), 'success');
   } catch (err) {
     toast(err.message, 'error');
   } finally {

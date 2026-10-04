@@ -13,7 +13,7 @@ Works without internet (except for the Tailwind and Quill CDNs), without a datab
 | **Create** (`/static/index.html`) | Description → streaming response from Ollama / LM Studio right into the Rich Text Editor (Quill) → title → save |
 | **Articles** (`static/articles.html`) | Cards with all articles, preview, open, delete with confirmation |
 | **Article** (`/static/article.html`) | Edit title and text, export to `.json` / `.md` / `.txt`, send to an external server |
-| **Settings** (`/static/settings.html`) | Model provider (Ollama / LM Studio), model selection, article storage folder, temperature, num predict, system prompt, target server URL |
+| **Settings** (`/static/settings.html`) | Interface language (English / Русский), model provider (Ollama / LM Studio), model selection, article storage folder, temperature, num predict, system prompt, target server URL |
 
 ---
 
@@ -82,13 +82,14 @@ Stop the server: `Ctrl+C`.
 
 Open **Settings**:
 
-1. **Model provider** — choose Ollama or LM Studio (the card will highlight, with the status next to it). Click "🔄 Refresh" if you launched the app after opening the page.
-2. **Model** — list of models from the selected provider. Click **💾 Save**.
-3. **Where to store articles** — a folder on disk. You can enter a path manually (`D:\MyArticles`), use "📂 Browse…" or the quick `articles` button. When changing the folder, already saved articles **move** to the new one.
-4. **Temperature** — from 0 (precise) to 2 (creative), usually 0.6–0.9.
-5. **Num Predict** — maximum tokens in the response: from 64 to 200000, or `0` for no limit (the model writes as much as needed, up to filling the context).
-6. **System Prompt** — the model's role and style.
-7. **Target Server URL** — *optional*. The address used by the "Send to server" button (`https://example.com/api/receive`). If the field is empty, the "Send to server" button on the article page will be disabled — articles are simply stored in the folder.
+1. **Language** — English (default) or Русский. The interface switches immediately; click **💾 Save** to keep the choice.
+2. **Model provider** — choose Ollama or LM Studio (the card will highlight, with the status next to it). Click "🔄 Refresh" if you launched the app after opening the page.
+3. **Model** — list of models from the selected provider. Click **💾 Save**.
+4. **Where to store articles** — a folder on disk. You can enter a path manually (`D:\MyArticles`), use "📂 Browse…" or the quick `articles` button. When changing the folder, already saved articles **move** to the new one.
+5. **Temperature** — from 0 (precise) to 2 (creative), usually 0.6–0.9.
+6. **Num Predict** — maximum tokens in the response: from 64 to 200000, or `0` for no limit (the model writes as much as needed, up to filling the context).
+7. **System Prompt** — the model's role and style.
+8. **Target Server URL** — *optional*. The address used by the "Send to server" button (`https://example.com/api/receive`). If the field is empty, the "Send to server" button on the article page will be disabled — articles are simply stored in the folder.
 
 All values are stored in `settings.json` in the project root.
 

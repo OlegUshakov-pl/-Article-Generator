@@ -1,11 +1,13 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en" data-title-key="doc.settings">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Настройки · Article Generator</title>
+<title>Settings · Article Generator</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="/static/i18n.js"></script>
 <style>
+  *, *::before, *::after { border-radius: 0 !important; }
   body { background:#f9fafb; }
   input[type=range] { -webkit-appearance:none; appearance:none; height:6px; border-radius:999px; background:#e5e7eb; outline:none; }
   input[type=range]::-webkit-slider-thumb {
@@ -30,9 +32,9 @@
       <span class="font-semibold text-gray-900 tracking-tight">Article<span class="text-indigo-600">Generator</span></span>
     </a>
     <nav class="flex items-center gap-1 text-sm">
-      <a href="/static/index.html" class="px-3.5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all">Создать</a>
-      <a href="/static/articles.html" class="px-3.5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all">Статьи</a>
-      <a href="/static/settings.html" class="px-3.5 py-2 rounded-lg font-medium bg-indigo-50 text-indigo-700 transition-all">Настройки</a>
+      <a href="/static/index.html" class="px-3.5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all" data-i18n="nav.create">Create</a>
+      <a href="/static/articles.html" class="px-3.5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all" data-i18n="nav.articles">Articles</a>
+      <a href="/static/settings.html" class="px-3.5 py-2 rounded-lg font-medium bg-indigo-50 text-indigo-700 transition-all" data-i18n="nav.settings">Settings</a>
     </nav>
   </div>
 </header>
@@ -40,8 +42,8 @@
 <main class="max-w-3xl mx-auto px-5 py-10">
 
   <div class="text-center mb-8">
-    <h1 class="text-3xl font-bold text-gray-900 tracking-tight">Настройки</h1>
-    <p class="text-gray-500 mt-2">Источник моделей, место хранения и параметры генерации.</p>
+    <h1 class="text-3xl font-bold text-gray-900 tracking-tight" data-i18n="settings.h1">Settings</h1>
+    <p class="text-gray-500 mt-2" data-i18n="settings.sub">Model provider, storage location and generation parameters.</p>
   </div>
 
   <!-- Loader -->
@@ -53,25 +55,45 @@
 
   <form id="form" class="hidden space-y-5" novalidate>
 
+    <!-- Language -->
+    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 grid place-items-center text-lg">🌐</span>
+        <div>
+          <h2 class="font-semibold text-gray-900" data-i18n="settings.langTitle">Language</h2>
+          <p class="text-xs text-gray-500" data-i18n="settings.langSub">Interface language</p>
+        </div>
+      </div>
+      <div class="relative">
+        <select id="language"
+          class="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 pr-10 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
+          <option value="en">English</option>
+          <option value="ru">Русский</option>
+        </select>
+        <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">▾</span>
+      </div>
+    </section>
+
     <!-- Providers -->
     <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
       <div class="flex items-center justify-between gap-3 mb-4">
         <div class="flex items-center gap-3">
           <span class="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 grid place-items-center text-lg">🤖</span>
           <div>
-            <h2 class="font-semibold text-gray-900">Источник моделей</h2>
-            <p class="text-xs text-gray-500">Выберите, где запущены установленные модели</p>
+            <h2 class="font-semibold text-gray-900" data-i18n="settings.providersTitle">Model provider</h2>
+            <p class="text-xs text-gray-500" data-i18n="settings.providersSub">Choose where your installed models run</p>
           </div>
         </div>
         <button type="button" id="refreshBtn"
-          class="text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-all">
-          🔄 Обновить
+          class="text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-all"
+          data-i18n="settings.refresh">
+          🔄 Refresh
         </button>
       </div>
 
       <div id="providerGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4"></div>
 
-      <label for="model" class="block text-sm font-medium text-gray-700 mb-2">Модель</label>
+      <label for="model" class="block text-sm font-medium text-gray-700 mb-2" data-i18n="settings.model">Model</label>
       <div class="relative">
         <select id="model"
           class="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 pr-10 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all disabled:opacity-60 disabled:cursor-not-allowed">
@@ -87,8 +109,8 @@
       <div class="flex items-center gap-3 mb-4">
         <span class="w-10 h-10 rounded-xl bg-cyan-50 border border-cyan-100 grid place-items-center text-lg">💾</span>
         <div>
-          <h2 class="font-semibold text-gray-900">Где сохранять статьи</h2>
-          <p class="text-xs text-gray-500">Папка на диске, абсолютный или относительный путь</p>
+          <h2 class="font-semibold text-gray-900" data-i18n="settings.storageTitle">Where to store articles</h2>
+          <p class="text-xs text-gray-500" data-i18n="settings.storageSub">A folder on disk, absolute or relative path</p>
         </div>
       </div>
 
@@ -97,12 +119,13 @@
           class="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700 font-mono text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
           placeholder="articles">
         <button type="button" id="browseBtn"
-          class="px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-600 text-sm font-medium hover:bg-gray-50 hover:text-gray-900 transition-all">
-          📂 Обзор…
+          class="px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-600 text-sm font-medium hover:bg-gray-50 hover:text-gray-900 transition-all"
+          data-i18n="settings.browse">
+          📂 Browse…
         </button>
       </div>
       <div class="flex flex-wrap items-center gap-2 mt-3">
-        <button type="button" data-quick="articles" class="quick px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-xs font-medium text-gray-600 transition-all">articles (по умолчанию)</button>
+        <button type="button" data-quick="articles" class="quick px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-xs font-medium text-gray-600 transition-all" data-i18n="settings.quickDefault">articles (default)</button>
         <span id="storageHint" class="text-xs text-gray-400"></span>
       </div>
     </section>
@@ -112,8 +135,8 @@
       <div class="flex items-center gap-3 mb-5">
         <span class="w-10 h-10 rounded-xl bg-violet-50 border border-violet-100 grid place-items-center text-lg">🎛️</span>
         <div>
-          <h2 class="font-semibold text-gray-900">Параметры генерации</h2>
-          <p class="text-xs text-gray-500">Температура и лимит токенов</p>
+          <h2 class="font-semibold text-gray-900" data-i18n="settings.genTitle">Generation parameters</h2>
+          <p class="text-xs text-gray-500" data-i18n="settings.genSub">Temperature and token limit</p>
         </div>
       </div>
 
@@ -123,16 +146,16 @@
       </label>
       <input id="temperature" type="range" min="0" max="2" step="0.1" value="0.7" class="w-full mb-1">
       <div class="flex justify-between text-[11px] text-gray-400 mb-6">
-        <span>точно</span><span>сбалансировано</span><span>творчески</span>
+        <span data-i18n="settings.precise">precise</span><span data-i18n="settings.balanced">balanced</span><span data-i18n="settings.creative">creative</span>
       </div>
 
       <label for="num_predict" class="flex items-center justify-between mb-2">
-        <span class="text-sm font-medium text-gray-700">Num Predict (макс. токенов)</span>
-        <span class="text-[11px] text-gray-400">от 64 до 200000 · 0 = без лимита</span>
+        <span class="text-sm font-medium text-gray-700" data-i18n="settings.numPredict">Num Predict (max tokens)</span>
+        <span class="text-[11px] text-gray-400" data-i18n="settings.numPredictRange">from 64 to 200000 · 0 = no limit</span>
       </label>
       <input id="num_predict" type="number" min="0" max="200000" step="1" value="1000" inputmode="numeric"
         class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
-      <p class="text-xs text-gray-400 mt-2">Укажите <code class="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">0</code> — лимит снимется, модель напишет столько, сколько нужно (до заполнения контекста).</p>
+      <p class="text-xs text-gray-400 mt-2" data-i18n="settings.numPredictHint">Enter 0 — the limit is removed and the model writes as much as needed (until the context is full).</p>
     </section>
 
     <!-- System prompt -->
@@ -141,12 +164,13 @@
         <span class="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 grid place-items-center text-lg">🧠</span>
         <div>
           <h2 class="font-semibold text-gray-900">System Prompt</h2>
-          <p class="text-xs text-gray-500">Роль и стиль модели при генерации</p>
+          <p class="text-xs text-gray-500" data-i18n="settings.systemSub">The model's role and style during generation</p>
         </div>
       </div>
       <textarea id="system_prompt" rows="4"
         class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-y"
-        placeholder="Ты полезный ассистент, который пишет качественные статьи."></textarea>
+        data-i18n-ph="settings.systemPh"
+        placeholder="You are a helpful assistant that writes high-quality articles."></textarea>
     </section>
 
     <!-- Target server -->
@@ -155,21 +179,21 @@
         <span class="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 grid place-items-center text-lg">📡</span>
         <div>
           <h2 class="font-semibold text-gray-900">Target Server URL</h2>
-          <p class="text-xs text-gray-500">Необязательно. Куда отправлять статьи по кнопке «Выслать на сервер»</p>
+          <p class="text-xs text-gray-500" data-i18n="settings.targetSub">Optional. Where the "Send to server" button posts articles</p>
         </div>
       </div>
       <input id="target_server_url" type="url"
         class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
         placeholder="https://example.com/api/receive">
-      <p class="text-xs text-gray-400 mt-2">Оставьте пустым, если статьи нужны только в папке. Пример: <code class="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">https://example.com/api/receive</code></p>
+      <p class="text-xs text-gray-400 mt-2"><span data-i18n="settings.targetHint">Leave it empty if you only need articles in the folder. Example:</span> <code class="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">https://example.com/api/receive</code></p>
     </section>
 
     <div class="flex items-center justify-between gap-3 pt-1">
       <a href="/static/index.html"
-        class="px-5 py-3 rounded-xl border border-gray-200 bg-white text-gray-600 font-medium hover:bg-gray-50 transition-all">← Назад</a>
+        class="px-5 py-3 rounded-xl border border-gray-200 bg-white text-gray-600 font-medium hover:bg-gray-50 transition-all" data-i18n="settings.back">← Back</a>
       <button type="submit" id="saveBtn"
         class="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-indigo-600 text-white font-semibold shadow-sm hover:bg-indigo-700 hover:shadow-md active:scale-[.98] transition-all disabled:opacity-60">
-        💾 Сохранить
+        <span data-i18n="common.save">💾 Save</span>
       </button>
     </div>
   </form>
@@ -181,7 +205,7 @@
   <div class="relative bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-lg overflow-hidden">
     <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
       <div>
-        <h3 class="font-semibold text-gray-900">Выбор папки</h3>
+        <h3 class="font-semibold text-gray-900" data-i18n="settings.pickerTitle">Choose a folder</h3>
         <p id="pickerPath" class="text-xs text-gray-400 font-mono mt-0.5 truncate max-w-xs"></p>
       </div>
       <button onclick="closePicker()" class="w-8 h-8 rounded-lg text-gray-400 hover:bg-gray-100 transition-all">✕</button>
@@ -189,10 +213,10 @@
     <div id="pickerList" class="max-h-72 overflow-y-auto p-2"></div>
     <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between gap-3 bg-gray-50/60">
       <div class="flex items-center gap-2">
-        <button id="pickerUp" class="px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-600 text-sm font-medium hover:bg-gray-50 transition-all">↑ Вверх</button>
-        <button id="pickerRoot" class="px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-600 text-sm font-medium hover:bg-gray-50 transition-all">🏠 Проект</button>
+        <button id="pickerUp" class="px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-600 text-sm font-medium hover:bg-gray-50 transition-all" data-i18n="settings.pickerUp">↑ Up</button>
+        <button id="pickerRoot" class="px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-600 text-sm font-medium hover:bg-gray-50 transition-all" data-i18n="settings.pickerRoot">🏠 Project</button>
       </div>
-      <button id="pickerSelect" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-all">Выбрать эту папку</button>
+      <button id="pickerSelect" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-all" data-i18n="settings.pickerSelect">Select this folder</button>
     </div>
   </div>
 </div>
@@ -201,10 +225,22 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
+const T = window.I18N.t;
+
+I18N.apply();
 
 let providersData = [];
 let selectedProvider = 'ollama';
 let savedSettings = {};
+
+$('language').addEventListener('change', e => I18N.setLang(e.target.value));
+
+I18N.onChange(() => {
+  if (!providersData.length) return;
+  renderProviders();
+  const p = providersData.find(x => x.id === selectedProvider);
+  if (p) $('modelHint').textContent = p.message + (p.models.length ? ` · ${T('settings.modelsCount', { n: p.models.length })}` : '');
+});
 
 function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -256,24 +292,16 @@ function renderProviders() {
         <span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>
         <span class="text-xs font-medium ${st.text}">${escapeHtml(p.message)}</span>
       </div>
-      <div class="mt-1 text-[11px] text-gray-400">${p.models.length} ${plural(p.models.length, ['модель','модели','моделей'])}</div>`;
+      <div class="mt-1 text-[11px] text-gray-400">${p.models.length} ${I18N.plural(p.models.length, T('settings.modelOne'), T('settings.modelFew'), T('settings.modelMany'))}</div>`;
     card.addEventListener('click', () => selectProvider(p.id));
     grid.appendChild(card);
   });
 }
 
-function plural(n, forms) {
-  const a = Math.abs(n) % 100, b = a % 10;
-  if (a > 10 && a < 20) return forms[2];
-  if (b > 1 && b < 5) return forms[1];
-  if (b === 1) return forms[0];
-  return forms[2];
-}
-
 function selectProvider(id, preferredModel) {
   selectedProvider = id;
   renderProviders();
-  const p = providersData.find(x => x.id === id) || { models: [], message: 'источник не найден', status: 'not_installed' };
+  const p = providersData.find(x => x.id === id) || { models: [], message: T('settings.providerNotFound'), status: 'not_installed' };
   const select = $('model');
   select.innerHTML = '';
 
@@ -281,8 +309,8 @@ function selectProvider(id, preferredModel) {
     const o = document.createElement('option');
     o.value = '';
     o.textContent = p.status === 'not_installed'
-      ? `${p.name || id} не установлена — модели недоступны`
-      : `${p.name || id} не запущена — модели недоступны`;
+      ? T('settings.noModelsInstalled', { n: p.name || id })
+      : T('settings.noModelsRunning', { n: p.name || id });
     select.appendChild(o);
     select.disabled = true;
   } else {
@@ -296,14 +324,14 @@ function selectProvider(id, preferredModel) {
     const want = preferredModel || savedSettings.model;
     select.value = p.models.includes(want) ? want : p.models[0];
   }
-  $('modelHint').textContent = p.message + (p.models.length ? ` · моделей: ${p.models.length}` : '');
+  $('modelHint').textContent = p.message + (p.models.length ? ` · ${T('settings.modelsCount', { n: p.models.length })}` : '');
 }
 
 async function loadProviders(preferredModel) {
   $('refreshBtn').disabled = true;
   try {
     const res = await fetch('/api/providers');
-    if (!res.ok) throw new Error('Сервер не отвечает');
+    if (!res.ok) throw new Error(T('settings.serverDown'));
     const data = await res.json();
     providersData = data.providers || [];
     const saved = savedSettings.provider || data.current || 'ollama';
@@ -312,7 +340,7 @@ async function loadProviders(preferredModel) {
     selectProvider(selectedProvider, preferredModel);
     providersData.filter(p => p.status !== 'ready').forEach(p => toast(p.message, 'info'));
   } catch (err) {
-    toast('Не удалось определить источники моделей: ' + err.message, 'error');
+    toast(T('settings.providersFailed', { e: err.message }), 'error');
   } finally {
     $('refreshBtn').disabled = false;
   }
@@ -337,10 +365,10 @@ async function closePicker() {
 
 async function navigatePicker(path) {
   const list = $('pickerList');
-  list.innerHTML = '<div class="px-3 py-6 text-center text-sm text-gray-400">Загрузка…</div>';
+  list.innerHTML = `<div class="px-3 py-6 text-center text-sm text-gray-400">${T('settings.pickerLoading')}</div>`;
   try {
     const res = await fetch('/api/fs/list?path=' + encodeURIComponent(path));
-    if (!res.ok) throw new Error((await res.json()).detail || 'Ошибка');
+    if (!res.ok) throw new Error((await res.json()).detail || 'Error');
     const data = await res.json();
     pickerPath = data.path;
     $('pickerPath').textContent = pickerPath;
@@ -349,7 +377,7 @@ async function navigatePicker(path) {
     list.innerHTML = '';
 
     if (!data.dirs.length) {
-      list.innerHTML = '<div class="px-3 py-6 text-center text-sm text-gray-400">В этой папке нет подпапок</div>';
+      list.innerHTML = `<div class="px-3 py-6 text-center text-sm text-gray-400">${T('settings.pickerEmpty')}</div>`;
     }
     data.dirs.forEach(d => {
       const row = document.createElement('button');
@@ -367,7 +395,7 @@ async function navigatePicker(path) {
       $('save_dir').value = pickerPath;
       updateStorageHint();
       closePicker();
-      toast('Папка выбрана', 'info');
+      toast(T('settings.pickerSelected'), 'info');
     };
   } catch (err) {
     list.innerHTML = `<div class="px-3 py-6 text-center text-sm text-red-500">${escapeHtml(err.message)}</div>`;
@@ -376,7 +404,7 @@ async function navigatePicker(path) {
 
 function updateStorageHint() {
   const v = $('save_dir').value.trim();
-  $('storageHint').textContent = v ? `текущее значение: ${v}` : '';
+  $('storageHint').textContent = v ? T('settings.currentValue', { v: v }) : '';
 }
 
 $('browseBtn').addEventListener('click', openPicker);
@@ -393,8 +421,13 @@ document.querySelectorAll('[data-quick]').forEach(btn => {
 async function load() {
   try {
     const res = await fetch('/api/settings');
-    if (!res.ok) throw new Error('Не удалось получить настройки');
+    if (!res.ok) throw new Error(T('settings.loadFailed'));
     savedSettings = await res.json();
+
+    if (savedSettings.language) {
+      $('language').value = savedSettings.language;
+      if (savedSettings.language !== I18N.lang) I18N.setLang(savedSettings.language);
+    }
 
     $('temperature').value = savedSettings.temperature;
     $('tempValue').textContent = savedSettings.temperature;
@@ -421,28 +454,28 @@ $('form').addEventListener('submit', async e => {
   const numRaw = String($('num_predict').value).trim();
   const numPredict = Number(numRaw);
   if (!numRaw || !Number.isInteger(numPredict) || numPredict < 0 || (numPredict !== 0 && (numPredict < 64 || numPredict > 200000))) {
-    toast('Num Predict: 0 (без лимита) или целое число от 64 до 200000', 'error');
+    toast(T('settings.numPredictErr'), 'error');
     $('num_predict').focus();
     return;
   }
 
   const temperature = parseFloat($('temperature').value);
   if (!Number.isFinite(temperature) || temperature < 0 || temperature > 2) {
-    toast('Temperature: значение от 0 до 2', 'error');
+    toast(T('settings.tempErr'), 'error');
     return;
   }
 
   const urlField = $('target_server_url');
   const targetUrl = urlField.value.trim();
   if (targetUrl && !urlField.checkValidity()) {
-    toast('Некорректный URL. Пример: https://example.com/api/receive', 'error');
+    toast(T('settings.urlErr'), 'error');
     urlField.focus();
     return;
   }
 
   const chosenModel = $('model').value || savedSettings.model;
   if (!chosenModel) {
-    toast('Модель не выбрана — источник недоступен', 'error');
+    toast(T('settings.modelNotChosen'), 'error');
     return;
   }
 
@@ -453,12 +486,13 @@ $('form').addEventListener('submit', async e => {
     system_prompt: $('system_prompt').value,
     num_predict: numPredict,
     target_server_url: targetUrl,
-    save_dir: $('save_dir').value.trim() || 'articles'
+    save_dir: $('save_dir').value.trim() || 'articles',
+    language: $('language').value
   };
 
   btn.disabled = true;
   const original = btn.innerHTML;
-  btn.innerHTML = '⏳ Сохраняем...';
+  btn.innerHTML = T('common.saving');
   try {
     const res = await fetch('/api/settings', {
       method: 'POST',
@@ -466,10 +500,12 @@ $('form').addEventListener('submit', async e => {
       body: JSON.stringify(body)
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.detail || 'Не удалось сохранить настройки');
+    if (!res.ok) throw new Error(data.detail || T('settings.saveFailed'));
     savedSettings = data;
+    I18N.setLang(body.language);
     updateStorageHint();
-    toast('Настройки сохранены', 'success');
+    toast(T('settings.saved'), 'success');
+    loadProviders(body.model);
   } catch (err) {
     toast(err.message, 'error');
   } finally {
